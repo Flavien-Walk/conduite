@@ -125,6 +125,7 @@
         <div class="speed-widget">
             <div class="speed-value" id="speedValue">0</div>
             <div class="speed-unit">km/h</div>
+            <div class="speed-limit" id="speedLimit">50</div>
         </div>
 
         <!-- Navigation card -->
@@ -135,13 +136,26 @@
             <div class="nav-info">
                 <div class="nav-distance" id="navDistance">--</div>
                 <div class="nav-street" id="navStreet">Recherche GPS...</div>
+                <div class="nav-time" id="navTime"></div>
             </div>
+        </div>
+
+        <!-- Liste des prochaines instructions -->
+        <div class="next-instructions" id="nextInstructions">
+            <div class="next-title">
+                <i class="fas fa-list"></i>
+                Prochaines directions
+            </div>
+            <div class="next-list" id="nextList"></div>
         </div>
 
         <!-- Actions -->
         <div class="action-buttons">
             <button class="btn-action" onclick="app.recenterMap()">
                 <i class="fas fa-location-arrow"></i>
+            </button>
+            <button class="btn-action" onclick="app.toggleInstructions()">
+                <i class="fas fa-route"></i>
             </button>
             <button class="btn-action" onclick="app.toggleStats()">
                 <i class="fas fa-chart-bar"></i>
@@ -182,7 +196,8 @@
         <!-- Loader -->
         <div class="loader" id="loader">
             <div class="spinner"></div>
-            <p>Génération du parcours...</p>
+            <p id="loaderText">Génération du parcours...</p>
+            <small id="loaderDetail">Calcul de l'itinéraire optimal</small>
         </div>
     </div>
 
@@ -255,6 +270,9 @@
     <!-- Leaflet JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    
+    <!-- Turf.js pour calculs géographiques précis -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
     
     <!-- Notre JavaScript -->
     <script src="script.js"></script>

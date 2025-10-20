@@ -3,7 +3,6 @@
 const CONFIG = {
     LYON_CENTER: { lat: 45.764043, lng: 4.835659 },
     
-    // Zones réelles autour de Lyon
     ZONES: [
         { id: 'lyon1', name: 'Lyon 1er', lat: 45.7675, lng: 4.8340 },
         { id: 'lyon2', name: 'Lyon 2e', lat: 45.7540, lng: 4.8270 },
@@ -19,78 +18,25 @@ const CONFIG = {
         { id: 'ecully', name: 'Écully', lat: 45.7745, lng: 4.7785 }
     ],
     
-    // Questions générales de code de la route
     QUESTIONS: [
-        {
-            q: "En agglomération, quelle est la vitesse maximale autorisée ?",
-            a: ["30 km/h", "50 km/h", "70 km/h", "90 km/h"],
-            correct: 1
-        },
-        {
-            q: "À quelle distance minimale devez-vous stationner d'un passage piéton ?",
-            a: ["3 mètres", "5 mètres", "10 mètres", "15 mètres"],
-            correct: 1
-        },
-        {
-            q: "Sur autoroute, quelle est la distance de sécurité minimale recommandée ?",
-            a: ["1 seconde", "2 secondes", "3 secondes", "5 secondes"],
-            correct: 1
-        },
-        {
-            q: "Que signifie un panneau triangulaire rouge avec bordure blanche ?",
-            a: ["Interdiction", "Danger", "Indication", "Obligation"],
-            correct: 1
-        },
-        {
-            q: "À un feu orange, vous devez :",
-            a: ["Accélérer", "Vous arrêter si possible en sécurité", "Continuer", "Klaxonner"],
-            correct: 1
-        },
-        {
-            q: "Le taux d'alcoolémie légal maximum pour un conducteur confirmé est de :",
-            a: ["0,2 g/L", "0,5 g/L", "0,8 g/L", "1,0 g/L"],
-            correct: 1
-        },
-        {
-            q: "Sur une route nationale bidirectionnelle, la vitesse maximale est de :",
-            a: ["70 km/h", "80 km/h", "90 km/h", "110 km/h"],
-            correct: 1
-        },
-        {
-            q: "Un triangle de pré-signalisation doit être placé à quelle distance minimum ?",
-            a: ["10 mètres", "30 mètres", "50 mètres", "100 mètres"],
-            correct: 1
-        },
-        {
-            q: "La ceinture de sécurité est obligatoire :",
-            a: ["Seulement sur autoroute", "À partir de 50 km/h", "Partout", "En ville uniquement"],
-            correct: 2
-        },
-        {
-            q: "Combien de points possède initialement un permis probatoire ?",
-            a: ["6 points", "8 points", "10 points", "12 points"],
-            correct: 0
-        }
+        { q: "En agglomération, quelle est la vitesse maximale autorisée ?", a: ["30 km/h", "50 km/h", "70 km/h", "90 km/h"], correct: 1 },
+        { q: "À quelle distance minimale devez-vous stationner d'un passage piéton ?", a: ["3 mètres", "5 mètres", "10 mètres", "15 mètres"], correct: 1 },
+        { q: "Sur autoroute, quelle est la distance de sécurité minimale recommandée ?", a: ["1 seconde", "2 secondes", "3 secondes", "5 secondes"], correct: 1 },
+        { q: "Que signifie un panneau triangulaire rouge avec bordure blanche ?", a: ["Interdiction", "Danger", "Indication", "Obligation"], correct: 1 },
+        { q: "À un feu orange, vous devez :", a: ["Accélérer", "Vous arrêter si possible en sécurité", "Continuer", "Klaxonner"], correct: 1 }
     ],
     
-    GPS_OPTIONS: {
-        enableHighAccuracy: true,
-        maximumAge: 1000,
-        timeout: 10000
-    },
-    
-    AVG_SPEED_KMH: 40
+    GPS_OPTIONS: { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 },
+    AVG_SPEED_KMH: 40,
+    DEFAULT_SPEED_LIMIT: 50
 };
 
 /* ==================== ÉTAT ==================== */
 
 const state = {
-    // Configuration
     selectedZones: [],
     duration: 30,
     vehicle: 'car',
-    
-    // Navigation
     map: null,
     watchId: null,
     routingControl: null,
@@ -98,33 +44,23 @@ const state = {
     currentPosition: null,
     startPosition: null,
     heading: 0,
-    mapBearing: 0, // Bearing actuel de la carte pour interpolation
-    
-    // Route
     route: null,
     instructions: [],
     currentInstructionIndex: 0,
-    
-    // Stats
     startTime: null,
     totalDistance: 0,
     totalDuration: 0,
     currentSpeed: 0,
-    
-    // Questions
+    currentSpeedLimit: CONFIG.DEFAULT_SPEED_LIMIT,
+    distanceTraveled: 0,
     askedQuestions: [],
     correctAnswers: 0,
     totalQuestions: 0,
     lastQuestionTime: 0,
-    
-    // UI
     isTracking: true,
     lastPosition: null,
     lastPositionTime: null,
-    
-    // Lissage mouvement
-    headingHistory: [],
-    maxHeadingHistory: 5
+    speedLimitCache: {}
 };
 
 /* ==================== APPLICATION ==================== */
@@ -132,13 +68,13 @@ const state = {
 const app = {
     
     init() {
-        console.log('🚗 Drive Lyon - Application de formation');
+        console.log('🚗 Drive Lyon - Formation GPS Professionnelle');
         this.renderZones();
         this.setupSlider();
         this.requestGPSPermission();
     },
     
-    // ========== NAVIGATION ÉCRANS ==========
+    // ========== ÉCRANS ==========
     
     showHome() {
         this.hideAllScreens();
@@ -165,7 +101,6 @@ const app = {
     renderZones() {
         const grid = document.getElementById('zonesGrid');
         grid.innerHTML = '';
-        
         CONFIG.ZONES.forEach(zone => {
             const chip = document.createElement('div');
             chip.className = 'zone-chip';
@@ -179,7 +114,6 @@ const app = {
     toggleZone(zoneId) {
         const chip = document.querySelector(`[data-zone-id="${zoneId}"]`);
         chip.classList.toggle('selected');
-        
         const index = state.selectedZones.indexOf(zoneId);
         if (index > -1) {
             state.selectedZones.splice(index, 1);
@@ -191,7 +125,6 @@ const app = {
     setupSlider() {
         const slider = document.getElementById('durationSlider');
         const label = document.getElementById('durationLabel');
-        
         slider.addEventListener('input', (e) => {
             state.duration = parseInt(e.target.value);
             label.textContent = `${state.duration} minutes`;
@@ -208,11 +141,7 @@ const app = {
     // ========== GPS ==========
     
     async requestGPSPermission() {
-        if (!navigator.geolocation) {
-            console.warn('GPS non disponible');
-            return;
-        }
-        
+        if (!navigator.geolocation) return;
         try {
             await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, CONFIG.GPS_OPTIONS);
@@ -230,19 +159,26 @@ const app = {
             return;
         }
         
-        document.getElementById('navStreet').textContent = 'Recherche GPS...';
+        console.log('📍 Démarrage GPS...');
+        document.getElementById('loaderText').textContent = 'Activation GPS...';
+        document.getElementById('loaderDetail').textContent = 'Recherche de votre position';
+        document.getElementById('navStreet').textContent = 'Activation GPS...';
         
-        // Position initiale
         navigator.geolocation.getCurrentPosition(
-            (pos) => this.onGPSSuccess(pos),
-            (err) => this.onGPSError(err),
+            (pos) => {
+                console.log('✓ GPS actif');
+                this.onGPSSuccess(pos);
+            },
+            (err) => {
+                console.error('❌ Erreur GPS:', err.message);
+                this.onGPSError(err);
+            },
             CONFIG.GPS_OPTIONS
         );
         
-        // Suivi continu
         state.watchId = navigator.geolocation.watchPosition(
             (pos) => this.onGPSUpdate(pos),
-            (err) => this.onGPSError(err),
+            (err) => console.warn('GPS update error:', err),
             CONFIG.GPS_OPTIONS
         );
     },
@@ -260,7 +196,11 @@ const app = {
         state.startPosition = { lat: latitude, lng: longitude };
         state.startTime = Date.now();
         
-        console.log('✓ GPS obtenu:', latitude.toFixed(4), longitude.toFixed(4));
+        console.log('📍 Position:', latitude.toFixed(5), longitude.toFixed(5));
+        
+        document.getElementById('gpsStatus').textContent = 'GPS actif';
+        document.getElementById('loaderText').textContent = 'Calcul du parcours...';
+        document.getElementById('loaderDetail').textContent = 'Optimisation de l\'itinéraire';
         
         this.initMap();
         this.generateRoute();
@@ -268,38 +208,43 @@ const app = {
     
     onGPSUpdate(position) {
         const { latitude, longitude, speed, heading } = position.coords;
+        
         state.currentPosition = { lat: latitude, lng: longitude };
         
-        // Mise à jour du cap avec interpolation douce
+        // Calcul distance parcourue avec Turf.js
+        if (state.lastPosition) {
+            const from = turf.point([state.lastPosition.lng, state.lastPosition.lat]);
+            const to = turf.point([longitude, latitude]);
+            const distance = turf.distance(from, to, { units: 'kilometers' });
+            state.distanceTraveled += distance;
+        }
+        
+        // Direction
         if (heading !== null && heading !== undefined && heading >= 0) {
-            // Utiliser le heading du GPS s'il est disponible
             state.heading = heading;
         } else if (state.lastPosition) {
-            // Calculer le bearing à partir du mouvement
-            const newHeading = this.calculateBearing(state.lastPosition, state.currentPosition);
-            
-            // Interpolation douce du heading
-            if (state.heading) {
-                const diff = ((newHeading - state.heading + 540) % 360) - 180;
-                state.heading = (state.heading + diff * 0.3 + 360) % 360; // Interpolation 30%
-            } else {
-                state.heading = newHeading;
+            const distance = this.calculateDistanceTurf(state.lastPosition, state.currentPosition);
+            if (distance > 0.005) {
+                state.heading = this.calculateBearing(state.lastPosition, state.currentPosition);
             }
         }
         
-        // Calcul de la vitesse
+        // Vitesse
         if (speed !== null && speed >= 0) {
             state.currentSpeed = Math.round(speed * 3.6);
         } else if (state.lastPosition && state.lastPositionTime) {
-            const distance = this.calculateDistance(state.lastPosition, state.currentPosition);
+            const distance = this.calculateDistanceTurf(state.lastPosition, state.currentPosition);
             const time = (Date.now() - state.lastPositionTime) / 1000;
-            if (time > 0 && distance > 0.001) { // Minimum 1m de mouvement
+            if (time > 0 && distance > 0.001) {
                 state.currentSpeed = Math.round((distance / time) * 3.6);
             }
         }
         
         state.lastPosition = state.currentPosition;
         state.lastPositionTime = Date.now();
+        
+        // Récupérer limitation de vitesse
+        this.getSpeedLimit(latitude, longitude);
         
         this.updateUI();
         this.updateNavigation();
@@ -309,20 +254,21 @@ const app = {
     
     onGPSError(error) {
         console.warn('Erreur GPS:', error.message);
-        
         if (!state.startPosition) {
-            if (confirm('GPS indisponible. Utiliser une position de test à Lyon ?')) {
-                this.useFallbackPosition();
-            } else {
-                this.showToast('GPS requis pour continuer', 'error');
-                setTimeout(() => this.showConfig(), 2000);
-            }
+            setTimeout(() => {
+                if (confirm('GPS indisponible.\n\nUtiliser une position de test à Lyon Centre ?')) {
+                    this.useFallbackPosition();
+                } else {
+                    this.showToast('GPS requis', 'error');
+                    setTimeout(() => this.showConfig(), 2000);
+                }
+            }, 500);
         }
     },
     
     useFallbackPosition() {
-        console.log('📍 Mode test avec position simulée');
-        this.showToast('Mode test : Position simulée à Lyon', 'warning');
+        console.log('🧪 Mode TEST');
+        this.showToast('Mode TEST : Position simulée', 'warning');
         
         const fakePosition = {
             coords: {
@@ -335,59 +281,113 @@ const app = {
         };
         
         this.onGPSSuccess(fakePosition);
+        
+        // Simulation mouvement
+        let angle = 0;
+        setInterval(() => {
+            if (state.currentPosition) {
+                angle += 5;
+                const radius = 0.002;
+                const fakePos = {
+                    coords: {
+                        latitude: CONFIG.LYON_CENTER.lat + Math.cos(angle * Math.PI / 180) * radius,
+                        longitude: CONFIG.LYON_CENTER.lng + Math.sin(angle * Math.PI / 180) * radius,
+                        speed: 10,
+                        heading: angle,
+                        accuracy: 10
+                    }
+                };
+                this.onGPSUpdate(fakePos);
+            }
+        }, 1000);
+    },
+    
+    // ========== LIMITE DE VITESSE (API Overpass) ==========
+    
+    async getSpeedLimit(lat, lng) {
+        const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+        
+        // Cache pour éviter trop de requêtes
+        if (state.speedLimitCache[cacheKey]) {
+            state.currentSpeedLimit = state.speedLimitCache[cacheKey];
+            document.getElementById('speedLimit').textContent = state.currentSpeedLimit;
+            return;
+        }
+        
+        try {
+            const radius = 50; // 50m de rayon
+            const query = `
+                [out:json][timeout:5];
+                way(around:${radius},${lat},${lng})["maxspeed"];
+                out body;
+            `;
+            
+            const response = await fetch('https://overpass-api.de/api/interpreter', {
+                method: 'POST',
+                body: query
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.elements && data.elements.length > 0) {
+                    const maxspeed = data.elements[0].tags.maxspeed;
+                    const limit = parseInt(maxspeed);
+                    if (!isNaN(limit)) {
+                        state.currentSpeedLimit = limit;
+                        state.speedLimitCache[cacheKey] = limit;
+                        document.getElementById('speedLimit').textContent = limit;
+                        console.log(`🚦 Limite: ${limit} km/h`);
+                        return;
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('Erreur récupération limite vitesse:', error);
+        }
+        
+        // Valeur par défaut
+        state.currentSpeedLimit = CONFIG.DEFAULT_SPEED_LIMIT;
+        document.getElementById('speedLimit').textContent = CONFIG.DEFAULT_SPEED_LIMIT;
     },
     
     // ========== CARTE ==========
     
     initMap() {
-        if (state.map) {
-            state.map.remove();
-        }
+        if (state.map) state.map.remove();
         
         state.map = L.map('map', {
             center: [state.startPosition.lat, state.startPosition.lng],
-            zoom: 18, // Zoom plus proche pour vue 3D
+            zoom: 17,
             zoomControl: false,
-            attributionControl: false,
-            rotate: true,
-            bearing: 0,
-            touchRotate: true,
-            rotateControl: false,
-            smoothWheelZoom: true,
-            smoothSensitivity: 1
+            attributionControl: false
         });
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19
         }).addTo(state.map);
         
-        state.map.on('dragstart', () => {
-            state.isTracking = false;
-        });
+        state.map.on('dragstart', () => { state.isTracking = false; });
         
-        console.log('✓ Carte initialisée en mode navigation 3D');
+        console.log('✓ Carte initialisée');
     },
     
     updateUserMarker() {
         if (!state.map || !state.currentPosition) return;
         
-        if (state.userMarker) {
-            state.map.removeLayer(state.userMarker);
-        }
+        if (state.userMarker) state.map.removeLayer(state.userMarker);
         
         const icon = state.vehicle === 'car' ? '🚗' : '🏍️';
         
-        // Le véhicule pointe toujours vers le haut (la carte tourne à la place)
         const userIcon = L.divIcon({
             className: 'user-marker',
             html: `<div style="
-                font-size: 40px;
-                transform: rotate(0deg);
+                font-size: 36px;
+                transform: rotate(${state.heading}deg);
                 filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
-                transition: none;
+                transition: transform 0.5s ease;
             ">${icon}</div>`,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
         });
         
         state.userMarker = L.marker(
@@ -396,64 +396,21 @@ const app = {
         ).addTo(state.map);
         
         if (state.isTracking) {
-            // Rotation fluide de la carte style Waze
-            this.rotateMapToHeading();
-            
-            // Centrage fluide
-            state.map.panTo(
+            state.map.setView(
                 [state.currentPosition.lat, state.currentPosition.lng],
-                {
-                    animate: true,
-                    duration: 0.3,
-                    easeLinearity: 0.3
-                }
+                17,
+                { animate: true, duration: 0.5 }
             );
         }
-    },
-    
-    rotateMapToHeading() {
-        if (!state.map) return;
-        
-        // Calculer le nouveau bearing (rotation inverse pour que le véhicule pointe vers le haut)
-        const targetBearing = -state.heading;
-        
-        // Interpolation douce du bearing
-        const currentBearing = state.mapBearing;
-        let bearingDiff = targetBearing - currentBearing;
-        
-        // Normaliser la différence d'angle (-180 à 180)
-        while (bearingDiff > 180) bearingDiff -= 360;
-        while (bearingDiff < -180) bearingDiff += 360;
-        
-        // Interpolation douce (20% du chemin à chaque frame)
-        const newBearing = currentBearing + bearingDiff * 0.2;
-        state.mapBearing = newBearing;
-        
-        // Appliquer la rotation à la carte via CSS
-        const mapPane = state.map.getPanes().mapPane;
-        if (mapPane) {
-            mapPane.style.transform = `rotateZ(${newBearing}deg)`;
-        }
-        
-        // Rotation inverse des contrôles pour qu'ils restent droits
-        const controls = document.querySelectorAll('.nav-card, .speed-widget, .action-buttons, .driving-header');
-        controls.forEach(control => {
-            if (control) {
-                control.style.transform = `rotateZ(${-newBearing}deg)`;
-            }
-        });
     },
     
     recenterMap() {
         if (state.currentPosition) {
             state.isTracking = true;
-            state.map.flyTo(
+            state.map.setView(
                 [state.currentPosition.lat, state.currentPosition.lng],
-                18,
-                {
-                    animate: true,
-                    duration: 0.8
-                }
+                17,
+                { animate: true, duration: 0.8 }
             );
             this.showToast('Carte recentrée', 'success');
         }
@@ -465,33 +422,28 @@ const app = {
         const loader = document.getElementById('loader');
         loader.classList.add('active');
         
-        // Calcul distance désirée
         const desiredDistanceKm = (state.duration / 60) * CONFIG.AVG_SPEED_KMH;
-        
-        // Sélection des waypoints
         const waypoints = [state.startPosition];
         
-        // Ajouter les zones sélectionnées
         state.selectedZones.forEach(zoneId => {
             const zone = CONFIG.ZONES.find(z => z.id === zoneId);
             if (zone) {
-                // Variation aléatoire pour éviter les points trop proches
                 waypoints.push({
-                    lat: zone.lat + (Math.random() - 0.5) * 0.02,
-                    lng: zone.lng + (Math.random() - 0.5) * 0.02
+                    lat: zone.lat + (Math.random() - 0.5) * 0.015,
+                    lng: zone.lng + (Math.random() - 0.5) * 0.015
                 });
             }
         });
         
-        // Retour au départ
         waypoints.push(state.startPosition);
         
-        console.log(`🎯 Génération parcours ${desiredDistanceKm.toFixed(1)} km avec ${waypoints.length} points`);
+        console.log(`🎯 Parcours: ${desiredDistanceKm.toFixed(1)} km, ${waypoints.length} points`);
+        
+        document.getElementById('loaderText').textContent = 'Calcul de l\'itinéraire...';
+        document.getElementById('loaderDetail').textContent = 'Optimisation du parcours';
         
         try {
-            if (state.routingControl) {
-                state.map.removeControl(state.routingControl);
-            }
+            if (state.routingControl) state.map.removeControl(state.routingControl);
             
             state.routingControl = L.Routing.control({
                 waypoints: waypoints.map(wp => L.latLng(wp.lat, wp.lng)),
@@ -501,25 +453,13 @@ const app = {
                 routeWhileDragging: false,
                 addWaypoints: false,
                 draggableWaypoints: false,
-                fitSelectedRoutes: false,
+                fitSelectedRoutes: true,
                 showAlternatives: false,
                 lineOptions: {
                     styles: [
-                        // Bordure sombre pour contraste
-                        {
-                            color: '#1e293b',
-                            opacity: 0.4,
-                            weight: 10
-                        },
-                        // Ligne principale bleue style Waze
-                        {
-                            color: '#3b82f6',
-                            opacity: 0.9,
-                            weight: 7
-                        }
-                    ],
-                    extendToWaypoints: true,
-                    missingRouteTolerance: 0
+                        { color: '#1e40af', opacity: 0.3, weight: 12 },
+                        { color: '#3b82f6', opacity: 0.9, weight: 8 }
+                    ]
                 },
                 createMarker: () => null
             }).addTo(state.map);
@@ -539,21 +479,24 @@ const app = {
                 state.instructions = route.instructions;
                 state.currentInstructionIndex = 0;
                 
+                // MASQUER LE LOADER
                 loader.classList.remove('active');
-                this.showToast(`Parcours généré : ${state.totalDistance.toFixed(1)} km`, 'success');
-                console.log(`✓ ${state.instructions.length} instructions de navigation`);
                 
+                this.showToast(`Parcours: ${state.totalDistance.toFixed(1)} km`, 'success');
+                console.log(`✓ ${state.instructions.length} instructions`);
+                
+                // Afficher instructions immédiatement
                 this.updateNavigation();
+                this.updateNextInstructions();
             });
             
             state.routingControl.on('routingerror', (e) => {
                 console.error('Erreur routing:', e);
                 loader.classList.remove('active');
-                this.showToast('Impossible de générer le parcours. Essayez d\'autres zones.', 'error');
+                this.showToast('Erreur génération. Essayez d\'autres zones.', 'error');
                 setTimeout(() => this.showConfig(), 2000);
             });
             
-            // Masquer le container de routing
             setTimeout(() => {
                 const container = document.querySelector('.leaflet-routing-container');
                 if (container) container.style.display = 'none';
@@ -562,109 +505,179 @@ const app = {
         } catch (error) {
             console.error('Erreur:', error);
             loader.classList.remove('active');
-            this.showToast('Erreur lors de la génération', 'error');
+            this.showToast('Erreur génération', 'error');
         }
     },
     
     // ========== NAVIGATION ==========
     
     updateNavigation() {
-        if (!state.currentPosition || !state.instructions || state.instructions.length === 0) {
-            return;
-        }
+        if (!state.currentPosition || !state.instructions || state.instructions.length === 0) return;
         
         let instruction = state.instructions[state.currentInstructionIndex];
         
-        // Vérifier que l'instruction a une position
         if (!instruction || !instruction.latLng) {
+            if (state.currentInstructionIndex < state.instructions.length - 1) {
+                state.currentInstructionIndex++;
+                this.updateNavigation();
+            }
             return;
         }
         
-        const instructionPos = {
-            lat: instruction.latLng.lat,
-            lng: instruction.latLng.lng
-        };
+        const instructionPos = { lat: instruction.latLng.lat, lng: instruction.latLng.lng };
+        const distanceM = this.calculateDistanceTurf(state.currentPosition, instructionPos) * 1000;
         
-        const distance = this.calculateDistance(state.currentPosition, instructionPos) * 1000; // mètres
-        
-        // Passer à l'instruction suivante si on est proche
-        if (distance < 30 && state.currentInstructionIndex < state.instructions.length - 1) {
+        // Passer à l'instruction suivante
+        if (distanceM < 50 && state.currentInstructionIndex < state.instructions.length - 1) {
             state.currentInstructionIndex++;
             instruction = state.instructions[state.currentInstructionIndex];
-            
-            if (!instruction || !instruction.latLng) {
-                return;
-            }
+            if (!instruction || !instruction.latLng) return;
+            this.showToast('Nouvelle direction !', 'success');
+            this.updateNextInstructions();
         }
         
-        // Recalculer la distance
-        const newPos = {
-            lat: instruction.latLng.lat,
-            lng: instruction.latLng.lng
-        };
-        const newDistance = this.calculateDistance(state.currentPosition, newPos) * 1000;
+        const newPos = { lat: instruction.latLng.lat, lng: instruction.latLng.lng };
+        const newDistance = this.calculateDistanceTurf(state.currentPosition, newPos) * 1000;
         
         // Affichage distance
         const distanceEl = document.getElementById('navDistance');
         if (newDistance > 1000) {
             distanceEl.textContent = `${(newDistance / 1000).toFixed(1)} km`;
+        } else if (newDistance > 100) {
+            distanceEl.textContent = `${Math.round(newDistance / 10) * 10} m`;
         } else {
             distanceEl.textContent = `${Math.round(newDistance)} m`;
         }
         
-        // Affichage instruction
-        document.getElementById('navStreet').textContent = instruction.text || 'Continuez tout droit';
+        // Calcul temps avec vitesse actuelle ou moyenne
+        const speed = state.currentSpeed > 0 ? state.currentSpeed : CONFIG.AVG_SPEED_KMH;
+        const timeMinutes = (newDistance / 1000) / speed * 60;
+        const timeEl = document.getElementById('navTime');
+        if (timeMinutes < 1) {
+            timeEl.textContent = `${Math.round(timeMinutes * 60)} sec`;
+        } else {
+            timeEl.textContent = `${Math.round(timeMinutes)} min`;
+        }
         
-        // Icône de direction
+        // Instruction simplifiée
+        let instructionText = instruction.text || 'Continuez tout droit';
+        instructionText = instructionText
+            .replace('Continue onto ', '')
+            .replace('Turn ', '')
+            .replace('Head ', '');
+        
+        document.getElementById('navStreet').textContent = instructionText;
+        
+        // Icône
         this.updateDirectionIcon(instruction.type);
     },
     
     updateDirectionIcon(type) {
         const icon = document.getElementById('navIcon');
+        if (!type) {
+            icon.className = 'fas fa-arrow-up';
+            icon.style.transform = 'rotate(0deg)';
+            return;
+        }
         
-        if (type.includes('SlightLeft')) {
+        const typeStr = type.toLowerCase();
+        
+        if (typeStr.includes('left') && typeStr.includes('slight')) {
             icon.className = 'fas fa-arrow-up';
             icon.style.transform = 'rotate(-30deg)';
-        } else if (type.includes('Left')) {
+        } else if (typeStr.includes('left') && typeStr.includes('sharp')) {
+            icon.className = 'fas fa-arrow-left';
+            icon.style.transform = 'rotate(-45deg)';
+        } else if (typeStr.includes('left')) {
             icon.className = 'fas fa-arrow-left';
             icon.style.transform = 'rotate(0deg)';
-        } else if (type.includes('SlightRight')) {
+        } else if (typeStr.includes('right') && typeStr.includes('slight')) {
             icon.className = 'fas fa-arrow-up';
             icon.style.transform = 'rotate(30deg)';
-        } else if (type.includes('Right')) {
+        } else if (typeStr.includes('right') && typeStr.includes('sharp')) {
+            icon.className = 'fas fa-arrow-right';
+            icon.style.transform = 'rotate(45deg)';
+        } else if (typeStr.includes('right')) {
             icon.className = 'fas fa-arrow-right';
             icon.style.transform = 'rotate(0deg)';
-        } else if (type === 'Roundabout') {
+        } else if (typeStr.includes('roundabout')) {
             icon.className = 'fas fa-sync';
             icon.style.transform = 'rotate(0deg)';
-        } else if (type === 'DestinationReached') {
+        } else if (typeStr.includes('destination')) {
             icon.className = 'fas fa-flag-checkered';
             icon.style.transform = 'rotate(0deg)';
-            this.finishDriving();
+            setTimeout(() => this.finishDriving(), 2000);
         } else {
             icon.className = 'fas fa-arrow-up';
             icon.style.transform = 'rotate(0deg)';
         }
     },
     
+    // LISTE DES PROCHAINES INSTRUCTIONS
+    updateNextInstructions() {
+        const listEl = document.getElementById('nextList');
+        listEl.innerHTML = '';
+        
+        // Afficher les 5 prochaines instructions
+        for (let i = state.currentInstructionIndex + 1; i < Math.min(state.currentInstructionIndex + 6, state.instructions.length); i++) {
+            const inst = state.instructions[i];
+            if (!inst || !inst.latLng) continue;
+            
+            const item = document.createElement('div');
+            item.className = 'next-item';
+            
+            const distanceM = this.calculateDistanceTurf(state.currentPosition, {
+                lat: inst.latLng.lat,
+                lng: inst.latLng.lng
+            }) * 1000;
+            
+            let text = inst.text || 'Continuer';
+            text = text.replace('Continue onto ', '').replace('Turn ', '').replace('Head ', '');
+            
+            item.innerHTML = `
+                <div class="next-item-icon">
+                    <i class="fas ${this.getIconForType(inst.type)}"></i>
+                </div>
+                <div class="next-item-info">
+                    <div class="next-item-distance">${distanceM > 1000 ? (distanceM/1000).toFixed(1) + ' km' : Math.round(distanceM) + ' m'}</div>
+                    <div class="next-item-text">${text}</div>
+                </div>
+            `;
+            
+            listEl.appendChild(item);
+        }
+    },
+    
+    getIconForType(type) {
+        if (!type) return 'fa-arrow-up';
+        const typeStr = type.toLowerCase();
+        if (typeStr.includes('left')) return 'fa-arrow-left';
+        if (typeStr.includes('right')) return 'fa-arrow-right';
+        if (typeStr.includes('roundabout')) return 'fa-sync';
+        if (typeStr.includes('destination')) return 'fa-flag-checkered';
+        return 'fa-arrow-up';
+    },
+    
+    toggleInstructions() {
+        const panel = document.getElementById('nextInstructions');
+        panel.classList.toggle('active');
+    },
+    
     // ========== UI ==========
     
     updateUI() {
-        // Vitesse
         document.getElementById('speedValue').textContent = state.currentSpeed;
         
-        // Stats
         if (state.startTime && state.totalDuration > 0) {
             const elapsed = (Date.now() - state.startTime) / 1000 / 60;
             const progress = Math.min(100, (elapsed / state.totalDuration) * 100);
             
-            document.getElementById('statDistance').textContent = `${state.totalDistance.toFixed(1)} km`;
+            document.getElementById('statDistance').textContent = `${state.distanceTraveled.toFixed(1)} km`;
             document.getElementById('statTime').textContent = `${Math.round(elapsed)} min`;
             document.getElementById('statQuestions').textContent = `${state.correctAnswers}/${state.totalQuestions}`;
             document.getElementById('progressFill').style.width = `${progress}%`;
             document.getElementById('progressText').textContent = `Progression: ${Math.round(progress)}%`;
             
-            // Fin du parcours
             if (elapsed >= state.totalDuration) {
                 this.finishDriving();
             }
@@ -672,30 +685,19 @@ const app = {
     },
     
     toggleStats() {
-        const panel = document.getElementById('statsPanel');
-        panel.classList.toggle('active');
+        document.getElementById('statsPanel').classList.toggle('active');
     },
     
     // ========== QUESTIONS ==========
     
     checkQuestion() {
-        // Ne pas poser trop de questions
         if (state.totalQuestions >= 5) return;
-        
-        // Attendre au moins 1 minute entre chaque question
-        const timeSinceLastQuestion = Date.now() - state.lastQuestionTime;
-        if (timeSinceLastQuestion < 60000) return;
-        
-        // 5% de chance de poser une question à chaque mise à jour GPS
+        if (Date.now() - state.lastQuestionTime < 60000) return;
         if (Math.random() > 0.05) return;
         
-        // Sélectionner une question non posée
-        const availableQuestions = CONFIG.QUESTIONS.filter(
-            q => !state.askedQuestions.includes(q.q)
-        );
-        
-        if (availableQuestions.length > 0) {
-            const question = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+        const available = CONFIG.QUESTIONS.filter(q => !state.askedQuestions.includes(q.q));
+        if (available.length > 0) {
+            const question = available[Math.floor(Math.random() * available.length)];
             this.showQuestion(question);
             state.lastQuestionTime = Date.now();
         }
@@ -705,34 +707,28 @@ const app = {
         state.askedQuestions.push(question.q);
         state.totalQuestions++;
         
-        const modal = document.getElementById('questionModal');
-        const text = document.getElementById('questionText');
+        document.getElementById('questionText').textContent = question.q;
         const grid = document.getElementById('answersGrid');
-        const btn = document.getElementById('btnContinue');
-        
-        text.textContent = question.q;
         grid.innerHTML = '';
-        btn.classList.remove('active');
+        document.getElementById('btnContinue').classList.remove('active');
         
         question.a.forEach((answer, index) => {
-            const answerBtn = document.createElement('button');
-            answerBtn.className = 'answer-btn';
-            answerBtn.textContent = answer;
-            answerBtn.onclick = () => this.selectAnswer(answerBtn, index, question.correct);
-            grid.appendChild(answerBtn);
+            const btn = document.createElement('button');
+            btn.className = 'answer-btn';
+            btn.textContent = answer;
+            btn.onclick = () => this.selectAnswer(btn, index, question.correct);
+            grid.appendChild(btn);
         });
         
-        modal.classList.add('active');
+        document.getElementById('questionModal').classList.add('active');
     },
     
     selectAnswer(button, index, correctIndex) {
-        // Désactiver tous les boutons
         document.querySelectorAll('.answer-btn').forEach(btn => {
             btn.onclick = null;
             btn.classList.add('disabled');
         });
         
-        // Marquer la bonne/mauvaise réponse
         if (index === correctIndex) {
             button.classList.add('correct');
             state.correctAnswers++;
@@ -743,7 +739,6 @@ const app = {
             this.showToast('Réponse incorrecte', 'error');
         }
         
-        // Afficher le bouton continuer
         document.getElementById('btnContinue').classList.add('active');
         this.updateUI();
     },
@@ -760,27 +755,30 @@ const app = {
             return;
         }
         
-        // Réinitialisation
-        state.currentPosition = null;
-        state.startPosition = null;
-        state.startTime = null;
-        state.route = null;
-        state.instructions = [];
-        state.currentInstructionIndex = 0;
-        state.totalDistance = 0;
-        state.totalDuration = 0;
-        state.askedQuestions = [];
-        state.correctAnswers = 0;
-        state.totalQuestions = 0;
-        state.lastQuestionTime = 0;
-        state.currentSpeed = 0;
-        state.isTracking = true;
+        // Reset
+        Object.assign(state, {
+            currentPosition: null,
+            startPosition: null,
+            startTime: null,
+            route: null,
+            instructions: [],
+            currentInstructionIndex: 0,
+            totalDistance: 0,
+            totalDuration: 0,
+            distanceTraveled: 0,
+            askedQuestions: [],
+            correctAnswers: 0,
+            totalQuestions: 0,
+            lastQuestionTime: 0,
+            currentSpeed: 0,
+            currentSpeedLimit: CONFIG.DEFAULT_SPEED_LIMIT,
+            isTracking: true,
+            heading: 0,
+            speedLimitCache: {}
+        });
         
         this.showDriving();
-        
-        setTimeout(() => {
-            this.startGPSTracking();
-        }, 300);
+        setTimeout(() => this.startGPSTracking(), 500);
     },
     
     stopDriving() {
@@ -794,7 +792,7 @@ const app = {
         
         const totalTime = state.startTime ? Math.round((Date.now() - state.startTime) / 1000 / 60) : 0;
         
-        document.getElementById('finalDistance').textContent = `${state.totalDistance.toFixed(1)} km`;
+        document.getElementById('finalDistance').textContent = `${state.distanceTraveled.toFixed(1)} km`;
         document.getElementById('finalTime').textContent = `${totalTime} min`;
         document.getElementById('finalQuestions').textContent = `${state.correctAnswers}/${state.totalQuestions}`;
         
@@ -808,36 +806,16 @@ const app = {
     
     // ========== UTILITAIRES ==========
     
-    calculateDistance(pos1, pos2) {
-        const R = 6371; // Rayon de la Terre en km
-        const dLat = this.toRad(pos2.lat - pos1.lat);
-        const dLng = this.toRad(pos2.lng - pos1.lng);
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(this.toRad(pos1.lat)) * Math.cos(this.toRad(pos2.lat)) *
-                  Math.sin(dLng/2) * Math.sin(dLng/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
+    calculateDistanceTurf(pos1, pos2) {
+        const from = turf.point([pos1.lng, pos1.lat]);
+        const to = turf.point([pos2.lng, pos2.lat]);
+        return turf.distance(from, to, { units: 'kilometers' });
     },
     
     calculateBearing(pos1, pos2) {
-        const lat1 = this.toRad(pos1.lat);
-        const lat2 = this.toRad(pos2.lat);
-        const dLng = this.toRad(pos2.lng - pos1.lng);
-        
-        const y = Math.sin(dLng) * Math.cos(lat2);
-        const x = Math.cos(lat1) * Math.sin(lat2) -
-                  Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-        
-        const bearing = Math.atan2(y, x);
-        return (this.toDeg(bearing) + 360) % 360;
-    },
-    
-    toRad(degrees) {
-        return degrees * Math.PI / 180;
-    },
-    
-    toDeg(radians) {
-        return radians * 180 / Math.PI;
+        const from = turf.point([pos1.lng, pos1.lat]);
+        const to = turf.point([pos2.lng, pos2.lat]);
+        return turf.bearing(from, to);
     },
     
     showToast(message, type = 'success') {
@@ -851,11 +829,7 @@ const app = {
             warning: 'fa-info-circle'
         };
         
-        toast.innerHTML = `
-            <i class="fas ${icons[type]}"></i>
-            <span>${message}</span>
-        `;
-        
+        toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
         container.appendChild(toast);
         
         setTimeout(() => {
@@ -871,5 +845,4 @@ document.addEventListener('DOMContentLoaded', () => {
     app.init();
 });
 
-// Export global
 window.app = app;
