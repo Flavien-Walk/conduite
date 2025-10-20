@@ -1,770 +1,725 @@
-/* ==================== CONFIGURATION GLOBALE ==================== */
+/* ==================== CONFIGURATION ==================== */
 
 const CONFIG = {
-    // Centre de Lyon
     LYON_CENTER: { lat: 45.764043, lng: 4.835659 },
     
-    // Zones géographiques
+    // Zones réelles autour de Lyon
     ZONES: [
-        'Lyon 1', 'Lyon 2', 'Lyon 3', 'Lyon 4', 'Lyon 5',
-        'Lyon 6', 'Lyon 7', 'Lyon 8', 'Lyon 9',
-        'Villeurbanne', 'Oullins', 'Pierre-Bénite',
-        'Saint-Priest', 'Caluire-et-Cuire', 'Écully',
-        'Bron', 'Tassin-la-Demi-Lune', 'Vénissieux',
-        'Décines', 'Meyzieu', 'Routes de campagne'
+        { id: 'lyon1', name: 'Lyon 1er', lat: 45.7675, lng: 4.8340 },
+        { id: 'lyon2', name: 'Lyon 2e', lat: 45.7540, lng: 4.8270 },
+        { id: 'lyon3', name: 'Lyon 3e', lat: 45.7570, lng: 4.8490 },
+        { id: 'lyon5', name: 'Lyon 5e', lat: 45.7575, lng: 4.8095 },
+        { id: 'lyon6', name: 'Lyon 6e', lat: 45.7705, lng: 4.8510 },
+        { id: 'lyon7', name: 'Lyon 7e', lat: 45.7335, lng: 4.8410 },
+        { id: 'villeurbanne', name: 'Villeurbanne', lat: 45.7665, lng: 4.8795 },
+        { id: 'caluire', name: 'Caluire', lat: 45.7975, lng: 4.8475 },
+        { id: 'oullins', name: 'Oullins', lat: 45.7150, lng: 4.8070 },
+        { id: 'venissieux', name: 'Vénissieux', lat: 45.6965, lng: 4.8840 },
+        { id: 'bron', name: 'Bron', lat: 45.7355, lng: 4.9110 },
+        { id: 'ecully', name: 'Écully', lat: 45.7745, lng: 4.7785 }
     ],
     
-    // Types de parcours
-    CATEGORIES: [
-        { id: 'agglomeration', name: 'Agglomération', icon: 'fa-city', speedLimit: 50 },
-        { id: 'priority', name: 'Priorité', icon: 'fa-exclamation-triangle', speedLimit: 50 },
-        { id: 'roundabout', name: 'Rond-point', icon: 'fa-sync', speedLimit: 30 },
-        { id: 'autoroute', name: 'Autoroute', icon: 'fa-road', speedLimit: 130 },
-        { id: 'campagne', name: 'Campagne', icon: 'fa-tree', speedLimit: 80 },
-        { id: 'zone30', name: 'Zone 30', icon: 'fa-school', speedLimit: 30 }
-    ],
-    
-    // Descriptions de difficulté
-    DIFFICULTY_LABELS: [
-        { level: 1, name: 'Débutant', desc: 'Parcours simple avec peu de manœuvres' },
-        { level: 2, name: 'Facile', desc: 'Parcours accessible avec quelques variations' },
-        { level: 3, name: 'Intermédiaire', desc: 'Parcours varié avec alternance de situations courantes' },
-        { level: 4, name: 'Avancé', desc: 'Parcours complexe avec nombreuses situations' },
-        { level: 5, name: 'Expert', desc: 'Parcours très exigeant avec situations multiples' }
-    ],
-    
-    // Options GPS
-    GPS_OPTIONS: {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 5000
-    }
-};
-
-/* ==================== BANQUE DE QUESTIONS ==================== */
-
-const QUESTIONS = {
-    agglomeration: [
+    // Questions générales de code de la route
+    QUESTIONS: [
         {
-            question: "Vous entrez en agglomération, quelle est la vitesse maximale autorisée ?",
-            answers: ["30 km/h", "50 km/h", "70 km/h", "90 km/h"],
+            q: "En agglomération, quelle est la vitesse maximale autorisée ?",
+            a: ["30 km/h", "50 km/h", "70 km/h", "90 km/h"],
             correct: 1
         },
         {
-            question: "En agglomération, à quelle distance minimale devez-vous stationner d'un passage piéton ?",
-            answers: ["3 mètres", "5 mètres", "10 mètres", "15 mètres"],
+            q: "À quelle distance minimale devez-vous stationner d'un passage piéton ?",
+            a: ["3 mètres", "5 mètres", "10 mètres", "15 mètres"],
             correct: 1
         },
         {
-            question: "En ville, vous devez particulièrement surveiller...",
-            answers: ["Les piétons", "Les cyclistes", "Les deux-roues", "Tous ces usagers"],
-            correct: 3
-        }
-    ],
-    campagne: [
-        {
-            question: "Sur une route de campagne bidirectionnelle, quelle est la vitesse maximale ?",
-            answers: ["70 km/h", "80 km/h", "90 km/h", "110 km/h"],
+            q: "Sur autoroute, quelle est la distance de sécurité minimale recommandée ?",
+            a: ["1 seconde", "2 secondes", "3 secondes", "5 secondes"],
             correct: 1
         },
         {
-            question: "En campagne, vous devez adapter votre vitesse selon...",
-            answers: ["La visibilité", "L'état de la route", "Les conditions météo", "Tous ces éléments"],
-            correct: 3
-        },
-        {
-            question: "Sur route de campagne, la distance de sécurité recommandée est...",
-            answers: ["Distance parcourue en 2 secondes", "50 mètres", "100 mètres", "Distance d'arrêt"],
-            correct: 0
-        }
-    ],
-    autoroute: [
-        {
-            question: "Sur autoroute, quelle est la vitesse minimale autorisée ?",
-            answers: ["50 km/h", "60 km/h", "70 km/h", "80 km/h"],
-            correct: 3
-        },
-        {
-            question: "Sur autoroute par temps de pluie, la vitesse maximale est...",
-            answers: ["100 km/h", "110 km/h", "120 km/h", "130 km/h"],
+            q: "Que signifie un panneau triangulaire rouge avec bordure blanche ?",
+            a: ["Interdiction", "Danger", "Indication", "Obligation"],
             correct: 1
         },
         {
-            question: "Pour doubler sur autoroute, vous devez...",
-            answers: ["Accélérer fortement", "Contrôler angles morts", "Klaxonner", "Mettre warnings"],
+            q: "À un feu orange, vous devez :",
+            a: ["Accélérer", "Vous arrêter si possible en sécurité", "Continuer", "Klaxonner"],
             correct: 1
-        }
-    ],
-    roundabout: [
+        },
         {
-            question: "À un rond-point, à qui devez-vous céder le passage ?",
-            answers: ["Véhicules à droite", "Véhicules à gauche", "Véhicules déjà engagés", "Personne"],
+            q: "Le taux d'alcoolémie légal maximum pour un conducteur confirmé est de :",
+            a: ["0,2 g/L", "0,5 g/L", "0,8 g/L", "1,0 g/L"],
+            correct: 1
+        },
+        {
+            q: "Sur une route nationale bidirectionnelle, la vitesse maximale est de :",
+            a: ["70 km/h", "80 km/h", "90 km/h", "110 km/h"],
+            correct: 1
+        },
+        {
+            q: "Un triangle de pré-signalisation doit être placé à quelle distance minimum ?",
+            a: ["10 mètres", "30 mètres", "50 mètres", "100 mètres"],
+            correct: 1
+        },
+        {
+            q: "La ceinture de sécurité est obligatoire :",
+            a: ["Seulement sur autoroute", "À partir de 50 km/h", "Partout", "En ville uniquement"],
             correct: 2
         },
         {
-            question: "Pour sortir d'un rond-point, vous devez mettre le clignotant...",
-            answers: ["À gauche", "À droite", "Pas de clignotant", "Les deux"],
-            correct: 1
-        },
-        {
-            question: "Dans un rond-point, vous devez...",
-            answers: ["Accélérer", "Ralentir et observer", "Garder la même vitesse", "Klaxonner"],
-            correct: 1
+            q: "Combien de points possède initialement un permis probatoire ?",
+            a: ["6 points", "8 points", "10 points", "12 points"],
+            correct: 0
         }
     ],
-    priority: [
-        {
-            question: "À une intersection sans signalisation, qui a la priorité ?",
-            answers: ["Véhicules de gauche", "Véhicules de droite", "Le plus rapide", "Le premier arrivé"],
-            correct: 1
-        },
-        {
-            question: "Le panneau 'Cédez le passage' vous oblige à...",
-            answers: ["Vous arrêter obligatoirement", "Ralentir et céder", "Accélérer", "Klaxonner"],
-            correct: 1
-        },
-        {
-            question: "À un feu orange, vous devez...",
-            answers: ["Accélérer", "Vous arrêter si possible", "Toujours passer", "Klaxonner"],
-            correct: 1
-        }
-    ],
-    zone30: [
-        {
-            question: "Dans une zone 30, quelle est la vitesse maximale autorisée ?",
-            answers: ["20 km/h", "30 km/h", "40 km/h", "50 km/h"],
-            correct: 1
-        },
-        {
-            question: "Une zone 30 est souvent mise en place...",
-            answers: ["Près des écoles", "Zones résidentielles", "Pour protéger piétons", "Toutes ces réponses"],
-            correct: 3
-        },
-        {
-            question: "En zone 30, votre attention doit être maximale car...",
-            answers: ["Piétons plus nombreux", "Enfants peuvent surgir", "Visibilité réduite", "Toutes ces raisons"],
-            correct: 3
-        }
-    ]
+    
+    GPS_OPTIONS: {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 10000
+    },
+    
+    AVG_SPEED_KMH: 40
 };
 
-/* ==================== ÉTAT DE L'APPLICATION ==================== */
+/* ==================== ÉTAT ==================== */
 
-const appState = {
-    // Configuration du parcours
+const state = {
+    // Configuration
     selectedZones: [],
-    selectedCategories: [],
-    duration: 60, // minutes
-    difficulty: 3,
+    duration: 30,
+    vehicle: 'car',
     
-    // État de navigation
+    // Navigation
     map: null,
     watchId: null,
+    routingControl: null,
+    userMarker: null,
     currentPosition: null,
     startPosition: null,
-    startTime: null,
+    heading: 0,
+    mapBearing: 0, // Bearing actuel de la carte pour interpolation
     
-    // Données de parcours
-    route: [],
-    routePolyline: null,
-    markers: [],
-    currentWaypoint: 0,
+    // Route
+    route: null,
+    instructions: [],
+    currentInstructionIndex: 0,
+    
+    // Stats
+    startTime: null,
     totalDistance: 0,
-    distanceCovered: 0,
+    totalDuration: 0,
+    currentSpeed: 0,
     
     // Questions
-    questionsAsked: [],
+    askedQuestions: [],
     correctAnswers: 0,
     totalQuestions: 0,
     lastQuestionTime: 0,
     
     // UI
-    currentSpeed: 0,
-    soundEnabled: true,
-    isTracking: false
+    isTracking: true,
+    lastPosition: null,
+    lastPositionTime: null,
+    
+    // Lissage mouvement
+    headingHistory: [],
+    maxHeadingHistory: 5
 };
 
-/* ==================== APPLICATION PRINCIPALE ==================== */
+/* ==================== APPLICATION ==================== */
 
 const app = {
     
     init() {
-        console.log('🚗 Drive Lyon - Initialisation...');
-        this.setupEventListeners();
-        this.initSelectionScreen();
-        this.requestPermissions();
-    },
-    
-    setupEventListeners() {
-        // Gestion du redimensionnement
-        window.addEventListener('resize', () => {
-            if (appState.map) {
-                appState.map.invalidateSize();
-            }
-        });
-        
-        // Empêcher la mise en veille
-        this.preventSleep();
-    },
-    
-    async requestPermissions() {
-        // Demander la permission de géolocalisation
-        if ('geolocation' in navigator) {
-            try {
-                await navigator.geolocation.getCurrentPosition(() => {
-                    console.log('✓ GPS autorisé');
-                }, () => {
-                    console.warn('GPS non autorisé');
-                });
-            } catch (err) {
-                console.error('Erreur GPS:', err);
-            }
-        }
-        
-        // Wake Lock
-        if ('wakeLock' in navigator) {
-            try {
-                await navigator.wakeLock.request('screen');
-                console.log('✓ Wake Lock activé');
-            } catch (err) {
-                console.warn('Wake Lock non disponible');
-            }
-        }
-    },
-    
-    preventSleep() {
-        // Empêcher la mise en veille pendant la conduite
-        let wakeLock = null;
-        
-        const requestWakeLock = async () => {
-            try {
-                wakeLock = await navigator.wakeLock.request('screen');
-            } catch (err) {
-                console.log('Wake Lock:', err);
-            }
-        };
-        
-        document.addEventListener('visibilitychange', () => {
-            if (wakeLock && document.visibilityState === 'visible') {
-                requestWakeLock();
-            }
-        });
-    },
-    
-    /* ==================== NAVIGATION ==================== */
-    
-    showScreen(screenId) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        const screen = document.getElementById(screenId);
-        if (screen) {
-            screen.classList.add('active');
-            
-            // Redimensionner la carte si on revient sur l'écran de conduite
-            if (screenId === 'drivingScreen' && appState.map) {
-                setTimeout(() => appState.map.invalidateSize(), 100);
-            }
-        }
-    },
-    
-    /* ==================== ÉCRAN DE SÉLECTION ==================== */
-    
-    initSelectionScreen() {
+        console.log('🚗 Drive Lyon - Application de formation');
         this.renderZones();
-        this.renderCategories();
-        this.setupSliders();
+        this.setupSlider();
+        this.requestGPSPermission();
     },
+    
+    // ========== NAVIGATION ÉCRANS ==========
+    
+    showHome() {
+        this.hideAllScreens();
+        document.getElementById('homeScreen').classList.add('active');
+        this.stopGPSTracking();
+    },
+    
+    showConfig() {
+        this.hideAllScreens();
+        document.getElementById('configScreen').classList.add('active');
+    },
+    
+    showDriving() {
+        this.hideAllScreens();
+        document.getElementById('drivingScreen').classList.add('active');
+    },
+    
+    hideAllScreens() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    },
+    
+    // ========== CONFIGURATION ==========
     
     renderZones() {
-        const container = document.getElementById('zonesContainer');
-        container.innerHTML = '';
+        const grid = document.getElementById('zonesGrid');
+        grid.innerHTML = '';
         
         CONFIG.ZONES.forEach(zone => {
             const chip = document.createElement('div');
-            chip.className = 'chip';
-            chip.textContent = zone;
-            chip.addEventListener('click', () => this.toggleZone(chip, zone));
-            container.appendChild(chip);
+            chip.className = 'zone-chip';
+            chip.textContent = zone.name;
+            chip.dataset.zoneId = zone.id;
+            chip.onclick = () => this.toggleZone(zone.id);
+            grid.appendChild(chip);
         });
     },
     
-    renderCategories() {
-        const container = document.getElementById('categoriesContainer');
-        container.innerHTML = '';
+    toggleZone(zoneId) {
+        const chip = document.querySelector(`[data-zone-id="${zoneId}"]`);
+        chip.classList.toggle('selected');
         
-        CONFIG.CATEGORIES.forEach(category => {
-            const chip = document.createElement('div');
-            chip.className = 'chip';
-            chip.innerHTML = `<i class="fas ${category.icon}"></i> ${category.name}`;
-            chip.dataset.categoryId = category.id;
-            chip.addEventListener('click', () => this.toggleCategory(chip, category.id));
-            container.appendChild(chip);
-        });
-    },
-    
-    toggleZone(element, zone) {
-        element.classList.toggle('selected');
-        const index = appState.selectedZones.indexOf(zone);
-        
+        const index = state.selectedZones.indexOf(zoneId);
         if (index > -1) {
-            appState.selectedZones.splice(index, 1);
+            state.selectedZones.splice(index, 1);
         } else {
-            appState.selectedZones.push(zone);
+            state.selectedZones.push(zoneId);
         }
     },
     
-    toggleCategory(element, categoryId) {
-        element.classList.toggle('selected');
-        const index = appState.selectedCategories.indexOf(categoryId);
+    setupSlider() {
+        const slider = document.getElementById('durationSlider');
+        const label = document.getElementById('durationLabel');
         
-        if (index > -1) {
-            appState.selectedCategories.splice(index, 1);
-        } else {
-            appState.selectedCategories.push(categoryId);
-        }
-    },
-    
-    setupSliders() {
-        // Slider durée
-        const durationSlider = document.getElementById('durationSlider');
-        const durationValue = document.getElementById('durationValue');
-        
-        durationSlider.addEventListener('input', (e) => {
-            appState.duration = parseInt(e.target.value);
-            durationValue.textContent = `${appState.duration} minutes`;
-        });
-        
-        // Slider difficulté
-        const difficultySlider = document.getElementById('difficultySlider');
-        const difficultyLabel = document.getElementById('difficultyLabel');
-        const difficultyDesc = document.getElementById('difficultyDescription');
-        
-        this.updateDifficultyStars(3);
-        
-        difficultySlider.addEventListener('input', (e) => {
-            appState.difficulty = parseInt(e.target.value);
-            const info = CONFIG.DIFFICULTY_LABELS.find(d => d.level === appState.difficulty);
-            difficultyLabel.textContent = info.name;
-            difficultyDesc.textContent = info.desc;
-            this.updateDifficultyStars(appState.difficulty);
+        slider.addEventListener('input', (e) => {
+            state.duration = parseInt(e.target.value);
+            label.textContent = `${state.duration} minutes`;
         });
     },
     
-    updateDifficultyStars(level) {
-        const container = document.getElementById('difficultyStars');
-        container.innerHTML = '';
-        
-        for (let i = 1; i <= 5; i++) {
-            const star = document.createElement('i');
-            star.className = `fas fa-star star ${i <= level ? 'active' : ''}`;
-            container.appendChild(star);
-        }
-    },
-    
-    /* ==================== DÉMARRAGE DU PARCOURS ==================== */
-    
-    startDriving() {
-        // Validation
-        if (appState.selectedZones.length === 0) {
-            alert('⚠️ Sélectionnez au moins une zone géographique');
-            return;
-        }
-        
-        if (appState.selectedCategories.length === 0) {
-            alert('⚠️ Sélectionnez au moins un type de parcours');
-            return;
-        }
-        
-        // Réinitialisation
-        this.resetDrivingState();
-        
-        // Afficher l'écran de conduite
-        this.showScreen('drivingScreen');
-        
-        // Initialiser la carte et le GPS
-        setTimeout(() => {
-            this.initMap();
-            this.startGPS();
-        }, 300);
-    },
-    
-    resetDrivingState() {
-        appState.currentPosition = null;
-        appState.startPosition = null;
-        appState.startTime = null;
-        appState.route = [];
-        appState.currentWaypoint = 0;
-        appState.totalDistance = 0;
-        appState.distanceCovered = 0;
-        appState.questionsAsked = [];
-        appState.correctAnswers = 0;
-        appState.totalQuestions = 0;
-        appState.currentSpeed = 0;
-        appState.lastQuestionTime = 0;
-        appState.isTracking = true;
-    },
-    
-    /* ==================== CARTE LEAFLET ==================== */
-    
-    initMap() {
-        if (appState.map) {
-            appState.map.remove();
-        }
-        
-        // Créer la carte
-        appState.map = L.map('map', {
-            center: [CONFIG.LYON_CENTER.lat, CONFIG.LYON_CENTER.lng],
-            zoom: 13,
-            zoomControl: true,
-            attributionControl: true
+    selectVehicle(vehicle) {
+        state.vehicle = vehicle;
+        document.querySelectorAll('.vehicle-card').forEach(card => {
+            card.classList.toggle('active', card.dataset.vehicle === vehicle);
         });
-        
-        // Ajouter les tuiles OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(appState.map);
-        
-        // Style personnalisé pour le bouton de zoom
-        setTimeout(() => {
-            const zoomControl = document.querySelector('.leaflet-control-zoom');
-            if (zoomControl) {
-                zoomControl.style.border = 'none';
-                zoomControl.style.borderRadius = '12px';
-                zoomControl.style.overflow = 'hidden';
-                zoomControl.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-            }
-        }, 100);
     },
     
-    /* ==================== GPS ==================== */
+    // ========== GPS ==========
     
-    startGPS() {
+    async requestGPSPermission() {
         if (!navigator.geolocation) {
-            alert('❌ GPS non disponible sur cet appareil');
+            console.warn('GPS non disponible');
             return;
         }
         
-        appState.watchId = navigator.geolocation.watchPosition(
-            (position) => this.onPositionUpdate(position),
-            (error) => this.onPositionError(error),
+        try {
+            await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, CONFIG.GPS_OPTIONS);
+            });
+            console.log('✓ GPS autorisé');
+        } catch (err) {
+            console.warn('⚠️ GPS non autorisé');
+        }
+    },
+    
+    startGPSTracking() {
+        if (!navigator.geolocation) {
+            this.showToast('GPS non disponible', 'error');
+            this.useFallbackPosition();
+            return;
+        }
+        
+        document.getElementById('navStreet').textContent = 'Recherche GPS...';
+        
+        // Position initiale
+        navigator.geolocation.getCurrentPosition(
+            (pos) => this.onGPSSuccess(pos),
+            (err) => this.onGPSError(err),
+            CONFIG.GPS_OPTIONS
+        );
+        
+        // Suivi continu
+        state.watchId = navigator.geolocation.watchPosition(
+            (pos) => this.onGPSUpdate(pos),
+            (err) => this.onGPSError(err),
             CONFIG.GPS_OPTIONS
         );
     },
     
-    onPositionUpdate(position) {
+    stopGPSTracking() {
+        if (state.watchId) {
+            navigator.geolocation.clearWatch(state.watchId);
+            state.watchId = null;
+        }
+    },
+    
+    onGPSSuccess(position) {
+        const { latitude, longitude } = position.coords;
+        state.currentPosition = { lat: latitude, lng: longitude };
+        state.startPosition = { lat: latitude, lng: longitude };
+        state.startTime = Date.now();
+        
+        console.log('✓ GPS obtenu:', latitude.toFixed(4), longitude.toFixed(4));
+        
+        this.initMap();
+        this.generateRoute();
+    },
+    
+    onGPSUpdate(position) {
         const { latitude, longitude, speed, heading } = position.coords;
+        state.currentPosition = { lat: latitude, lng: longitude };
         
-        appState.currentPosition = { lat: latitude, lng: longitude };
-        
-        // Première position = point de départ
-        if (!appState.startPosition) {
-            appState.startPosition = { lat: latitude, lng: longitude };
-            appState.startTime = Date.now();
+        // Mise à jour du cap avec interpolation douce
+        if (heading !== null && heading !== undefined && heading >= 0) {
+            // Utiliser le heading du GPS s'il est disponible
+            state.heading = heading;
+        } else if (state.lastPosition) {
+            // Calculer le bearing à partir du mouvement
+            const newHeading = this.calculateBearing(state.lastPosition, state.currentPosition);
             
-            // Générer le parcours
-            this.generateRoute();
-            
-            // Centrer la carte
-            appState.map.setView([latitude, longitude], 15);
+            // Interpolation douce du heading
+            if (state.heading) {
+                const diff = ((newHeading - state.heading + 540) % 360) - 180;
+                state.heading = (state.heading + diff * 0.3 + 360) % 360; // Interpolation 30%
+            } else {
+                state.heading = newHeading;
+            }
         }
         
         // Calcul de la vitesse
         if (speed !== null && speed >= 0) {
-            appState.currentSpeed = Math.round(speed * 3.6); // m/s -> km/h
-        } else {
-            // Calcul manuel si speed non disponible
-            if (appState.lastPosition && appState.lastPositionTime) {
-                const distance = this.calculateDistance(appState.lastPosition, appState.currentPosition);
-                const time = (Date.now() - appState.lastPositionTime) / 1000; // secondes
-                if (time > 0) {
-                    appState.currentSpeed = Math.round((distance / time) * 3.6);
-                }
+            state.currentSpeed = Math.round(speed * 3.6);
+        } else if (state.lastPosition && state.lastPositionTime) {
+            const distance = this.calculateDistance(state.lastPosition, state.currentPosition);
+            const time = (Date.now() - state.lastPositionTime) / 1000;
+            if (time > 0 && distance > 0.001) { // Minimum 1m de mouvement
+                state.currentSpeed = Math.round((distance / time) * 3.6);
             }
         }
         
-        appState.lastPosition = appState.currentPosition;
-        appState.lastPositionTime = Date.now();
+        state.lastPosition = state.currentPosition;
+        state.lastPositionTime = Date.now();
         
-        // Mettre à jour l'UI
         this.updateUI();
-        
-        // Vérifier si on doit poser une question
+        this.updateNavigation();
+        this.updateUserMarker();
         this.checkQuestion();
-        
-        // Mettre à jour la position sur la carte
-        this.updateMapPosition(latitude, longitude, heading);
     },
     
-    onPositionError(error) {
-        console.error('Erreur GPS:', error);
-        const statusEl = document.getElementById('gpsStatus');
-        if (statusEl) {
-            statusEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Erreur GPS</span>';
-            statusEl.style.color = '#ef4444';
+    onGPSError(error) {
+        console.warn('Erreur GPS:', error.message);
+        
+        if (!state.startPosition) {
+            if (confirm('GPS indisponible. Utiliser une position de test à Lyon ?')) {
+                this.useFallbackPosition();
+            } else {
+                this.showToast('GPS requis pour continuer', 'error');
+                setTimeout(() => this.showConfig(), 2000);
+            }
         }
     },
     
-    updateMapPosition(lat, lng, heading) {
-        // Supprimer l'ancien marqueur de position
-        if (appState.userMarker) {
-            appState.map.removeLayer(appState.userMarker);
+    useFallbackPosition() {
+        console.log('📍 Mode test avec position simulée');
+        this.showToast('Mode test : Position simulée à Lyon', 'warning');
+        
+        const fakePosition = {
+            coords: {
+                latitude: CONFIG.LYON_CENTER.lat,
+                longitude: CONFIG.LYON_CENTER.lng,
+                speed: 0,
+                heading: 0,
+                accuracy: 10
+            }
+        };
+        
+        this.onGPSSuccess(fakePosition);
+    },
+    
+    // ========== CARTE ==========
+    
+    initMap() {
+        if (state.map) {
+            state.map.remove();
         }
         
-        // Icône personnalisée de position
+        state.map = L.map('map', {
+            center: [state.startPosition.lat, state.startPosition.lng],
+            zoom: 18, // Zoom plus proche pour vue 3D
+            zoomControl: false,
+            attributionControl: false,
+            rotate: true,
+            bearing: 0,
+            touchRotate: true,
+            rotateControl: false,
+            smoothWheelZoom: true,
+            smoothSensitivity: 1
+        });
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(state.map);
+        
+        state.map.on('dragstart', () => {
+            state.isTracking = false;
+        });
+        
+        console.log('✓ Carte initialisée en mode navigation 3D');
+    },
+    
+    updateUserMarker() {
+        if (!state.map || !state.currentPosition) return;
+        
+        if (state.userMarker) {
+            state.map.removeLayer(state.userMarker);
+        }
+        
+        const icon = state.vehicle === 'car' ? '🚗' : '🏍️';
+        
+        // Le véhicule pointe toujours vers le haut (la carte tourne à la place)
         const userIcon = L.divIcon({
-            className: 'user-position-marker',
-            html: `<div style="width: 20px; height: 20px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: 4px solid white; border-radius: 50%; box-shadow: 0 4px 12px rgba(99,102,241,0.5);"></div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+            className: 'user-marker',
+            html: `<div style="
+                font-size: 40px;
+                transform: rotate(0deg);
+                filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+                transition: none;
+            ">${icon}</div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
         });
         
-        appState.userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(appState.map);
+        state.userMarker = L.marker(
+            [state.currentPosition.lat, state.currentPosition.lng],
+            { icon: userIcon, zIndexOffset: 1000 }
+        ).addTo(state.map);
         
-        // Centrer la carte sur la position (si le suivi est activé)
-        if (appState.isTracking) {
-            appState.map.setView([lat, lng], appState.map.getZoom(), { animate: true, duration: 0.5 });
+        if (state.isTracking) {
+            // Rotation fluide de la carte style Waze
+            this.rotateMapToHeading();
+            
+            // Centrage fluide
+            state.map.panTo(
+                [state.currentPosition.lat, state.currentPosition.lng],
+                {
+                    animate: true,
+                    duration: 0.3,
+                    easeLinearity: 0.3
+                }
+            );
         }
     },
     
-    centerMap() {
-        if (appState.currentPosition) {
-            appState.isTracking = true;
-            appState.map.setView([appState.currentPosition.lat, appState.currentPosition.lng], 15, {
-                animate: true,
-                duration: 0.5
-            });
+    rotateMapToHeading() {
+        if (!state.map) return;
+        
+        // Calculer le nouveau bearing (rotation inverse pour que le véhicule pointe vers le haut)
+        const targetBearing = -state.heading;
+        
+        // Interpolation douce du bearing
+        const currentBearing = state.mapBearing;
+        let bearingDiff = targetBearing - currentBearing;
+        
+        // Normaliser la différence d'angle (-180 à 180)
+        while (bearingDiff > 180) bearingDiff -= 360;
+        while (bearingDiff < -180) bearingDiff += 360;
+        
+        // Interpolation douce (20% du chemin à chaque frame)
+        const newBearing = currentBearing + bearingDiff * 0.2;
+        state.mapBearing = newBearing;
+        
+        // Appliquer la rotation à la carte via CSS
+        const mapPane = state.map.getPanes().mapPane;
+        if (mapPane) {
+            mapPane.style.transform = `rotateZ(${newBearing}deg)`;
+        }
+        
+        // Rotation inverse des contrôles pour qu'ils restent droits
+        const controls = document.querySelectorAll('.nav-card, .speed-widget, .action-buttons, .driving-header');
+        controls.forEach(control => {
+            if (control) {
+                control.style.transform = `rotateZ(${-newBearing}deg)`;
+            }
+        });
+    },
+    
+    recenterMap() {
+        if (state.currentPosition) {
+            state.isTracking = true;
+            state.map.flyTo(
+                [state.currentPosition.lat, state.currentPosition.lng],
+                18,
+                {
+                    animate: true,
+                    duration: 0.8
+                }
+            );
+            this.showToast('Carte recentrée', 'success');
         }
     },
     
-    /* ==================== GÉNÉRATION DE PARCOURS ==================== */
+    // ========== GÉNÉRATION ROUTE ==========
     
-    generateRoute() {
-        const durationMinutes = appState.duration;
-        const avgSpeed = 40; // km/h moyen
-        const totalDistanceKm = (durationMinutes / 60) * avgSpeed;
-        appState.totalDistance = totalDistanceKm;
+    async generateRoute() {
+        const loader = document.getElementById('loader');
+        loader.classList.add('active');
         
-        // Nombre de waypoints selon difficulté
-        const numWaypoints = 6 + (appState.difficulty * 2);
+        // Calcul distance désirée
+        const desiredDistanceKm = (state.duration / 60) * CONFIG.AVG_SPEED_KMH;
         
-        const route = [];
-        const start = appState.startPosition;
+        // Sélection des waypoints
+        const waypoints = [state.startPosition];
         
-        // Rayon du parcours (en degrés)
-        const baseRadius = totalDistanceKm / 80;
-        const radius = baseRadius * (0.6 + appState.difficulty * 0.2);
-        
-        // Générer des points en boucle
-        for (let i = 0; i < numWaypoints; i++) {
-            const angle = (i / numWaypoints) * 2 * Math.PI;
-            const distance = radius * (0.7 + Math.random() * 0.6);
-            const randomOffset = (Math.random() - 0.5) * 0.3;
-            
-            // Catégorie aléatoire parmi celles sélectionnées
-            const categoryId = appState.selectedCategories[
-                Math.floor(Math.random() * appState.selectedCategories.length)
-            ];
-            
-            const category = CONFIG.CATEGORIES.find(c => c.id === categoryId);
-            
-            const waypoint = {
-                lat: start.lat + (distance * Math.cos(angle + randomOffset)),
-                lng: start.lng + (distance * Math.sin(angle + randomOffset)),
-                category: category,
-                type: 'waypoint'
-            };
-            
-            route.push(waypoint);
-        }
-        
-        // Point final = retour au départ
-        route.push({
-            lat: start.lat,
-            lng: start.lng,
-            category: CONFIG.CATEGORIES.find(c => c.id === 'agglomeration'),
-            type: 'end'
+        // Ajouter les zones sélectionnées
+        state.selectedZones.forEach(zoneId => {
+            const zone = CONFIG.ZONES.find(z => z.id === zoneId);
+            if (zone) {
+                // Variation aléatoire pour éviter les points trop proches
+                waypoints.push({
+                    lat: zone.lat + (Math.random() - 0.5) * 0.02,
+                    lng: zone.lng + (Math.random() - 0.5) * 0.02
+                });
+            }
         });
         
-        appState.route = route;
+        // Retour au départ
+        waypoints.push(state.startPosition);
         
-        // Dessiner le parcours
-        this.drawRoute();
-    },
-    
-    drawRoute() {
-        // Supprimer l'ancien tracé
-        if (appState.routePolyline) {
-            appState.map.removeLayer(appState.routePolyline);
-        }
+        console.log(`🎯 Génération parcours ${desiredDistanceKm.toFixed(1)} km avec ${waypoints.length} points`);
         
-        // Supprimer les anciens marqueurs
-        appState.markers.forEach(marker => appState.map.removeLayer(marker));
-        appState.markers = [];
-        
-        // Créer le tracé
-        const latlngs = appState.route.map(point => [point.lat, point.lng]);
-        
-        appState.routePolyline = L.polyline(latlngs, {
-            color: '#6366f1',
-            weight: 5,
-            opacity: 0.8,
-            smoothFactor: 1,
-            lineJoin: 'round'
-        }).addTo(appState.map);
-        
-        // Ajouter les marqueurs
-        appState.route.forEach((point, index) => {
-            let markerColor = '#6366f1';
-            let iconHtml = '<i class="fas fa-circle"></i>';
-            
-            if (point.type === 'end') {
-                markerColor = '#ef4444';
-                iconHtml = '<i class="fas fa-flag-checkered"></i>';
-            } else if (index === 0) {
-                markerColor = '#10b981';
-                iconHtml = '<i class="fas fa-play"></i>';
+        try {
+            if (state.routingControl) {
+                state.map.removeControl(state.routingControl);
             }
             
-            const icon = L.divIcon({
-                className: 'waypoint-marker',
-                html: `<div style="color: ${markerColor}; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${iconHtml}</div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
+            state.routingControl = L.Routing.control({
+                waypoints: waypoints.map(wp => L.latLng(wp.lat, wp.lng)),
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1'
+                }),
+                routeWhileDragging: false,
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: false,
+                showAlternatives: false,
+                lineOptions: {
+                    styles: [
+                        // Bordure sombre pour contraste
+                        {
+                            color: '#1e293b',
+                            opacity: 0.4,
+                            weight: 10
+                        },
+                        // Ligne principale bleue style Waze
+                        {
+                            color: '#3b82f6',
+                            opacity: 0.9,
+                            weight: 7
+                        }
+                    ],
+                    extendToWaypoints: true,
+                    missingRouteTolerance: 0
+                },
+                createMarker: () => null
+            }).addTo(state.map);
+            
+            state.routingControl.on('routesfound', (e) => {
+                const route = e.routes[0];
+                
+                if (!route || !route.instructions) {
+                    this.showToast('Route invalide', 'error');
+                    loader.classList.remove('active');
+                    return;
+                }
+                
+                state.route = route;
+                state.totalDistance = route.summary.totalDistance / 1000;
+                state.totalDuration = route.summary.totalTime / 60;
+                state.instructions = route.instructions;
+                state.currentInstructionIndex = 0;
+                
+                loader.classList.remove('active');
+                this.showToast(`Parcours généré : ${state.totalDistance.toFixed(1)} km`, 'success');
+                console.log(`✓ ${state.instructions.length} instructions de navigation`);
+                
+                this.updateNavigation();
             });
             
-            const marker = L.marker([point.lat, point.lng], { icon: icon })
-                .bindPopup(`<b>${point.category.name}</b><br>Limite: ${point.category.speedLimit} km/h`)
-                .addTo(appState.map);
+            state.routingControl.on('routingerror', (e) => {
+                console.error('Erreur routing:', e);
+                loader.classList.remove('active');
+                this.showToast('Impossible de générer le parcours. Essayez d\'autres zones.', 'error');
+                setTimeout(() => this.showConfig(), 2000);
+            });
             
-            appState.markers.push(marker);
-        });
-        
-        // Ajuster la vue pour voir tout le parcours
-        const bounds = L.latLngBounds(latlngs);
-        appState.map.fitBounds(bounds, { padding: [50, 50] });
+            // Masquer le container de routing
+            setTimeout(() => {
+                const container = document.querySelector('.leaflet-routing-container');
+                if (container) container.style.display = 'none';
+            }, 100);
+            
+        } catch (error) {
+            console.error('Erreur:', error);
+            loader.classList.remove('active');
+            this.showToast('Erreur lors de la génération', 'error');
+        }
     },
     
-    /* ==================== MISE À JOUR UI ==================== */
+    // ========== NAVIGATION ==========
+    
+    updateNavigation() {
+        if (!state.currentPosition || !state.instructions || state.instructions.length === 0) {
+            return;
+        }
+        
+        let instruction = state.instructions[state.currentInstructionIndex];
+        
+        // Vérifier que l'instruction a une position
+        if (!instruction || !instruction.latLng) {
+            return;
+        }
+        
+        const instructionPos = {
+            lat: instruction.latLng.lat,
+            lng: instruction.latLng.lng
+        };
+        
+        const distance = this.calculateDistance(state.currentPosition, instructionPos) * 1000; // mètres
+        
+        // Passer à l'instruction suivante si on est proche
+        if (distance < 30 && state.currentInstructionIndex < state.instructions.length - 1) {
+            state.currentInstructionIndex++;
+            instruction = state.instructions[state.currentInstructionIndex];
+            
+            if (!instruction || !instruction.latLng) {
+                return;
+            }
+        }
+        
+        // Recalculer la distance
+        const newPos = {
+            lat: instruction.latLng.lat,
+            lng: instruction.latLng.lng
+        };
+        const newDistance = this.calculateDistance(state.currentPosition, newPos) * 1000;
+        
+        // Affichage distance
+        const distanceEl = document.getElementById('navDistance');
+        if (newDistance > 1000) {
+            distanceEl.textContent = `${(newDistance / 1000).toFixed(1)} km`;
+        } else {
+            distanceEl.textContent = `${Math.round(newDistance)} m`;
+        }
+        
+        // Affichage instruction
+        document.getElementById('navStreet').textContent = instruction.text || 'Continuez tout droit';
+        
+        // Icône de direction
+        this.updateDirectionIcon(instruction.type);
+    },
+    
+    updateDirectionIcon(type) {
+        const icon = document.getElementById('navIcon');
+        
+        if (type.includes('SlightLeft')) {
+            icon.className = 'fas fa-arrow-up';
+            icon.style.transform = 'rotate(-30deg)';
+        } else if (type.includes('Left')) {
+            icon.className = 'fas fa-arrow-left';
+            icon.style.transform = 'rotate(0deg)';
+        } else if (type.includes('SlightRight')) {
+            icon.className = 'fas fa-arrow-up';
+            icon.style.transform = 'rotate(30deg)';
+        } else if (type.includes('Right')) {
+            icon.className = 'fas fa-arrow-right';
+            icon.style.transform = 'rotate(0deg)';
+        } else if (type === 'Roundabout') {
+            icon.className = 'fas fa-sync';
+            icon.style.transform = 'rotate(0deg)';
+        } else if (type === 'DestinationReached') {
+            icon.className = 'fas fa-flag-checkered';
+            icon.style.transform = 'rotate(0deg)';
+            this.finishDriving();
+        } else {
+            icon.className = 'fas fa-arrow-up';
+            icon.style.transform = 'rotate(0deg)';
+        }
+    },
+    
+    // ========== UI ==========
     
     updateUI() {
         // Vitesse
-        document.getElementById('speedValue').textContent = appState.currentSpeed;
+        document.getElementById('speedValue').textContent = state.currentSpeed;
         
-        // Limite de vitesse du segment actuel
-        if (appState.route.length > 0 && appState.currentWaypoint < appState.route.length) {
-            const currentSegment = appState.route[appState.currentWaypoint];
-            const speedLimitEl = document.getElementById('speedLimit');
-            if (speedLimitEl) {
-                const limitSpan = speedLimitEl.querySelector('span');
-                if (limitSpan) {
-                    limitSpan.textContent = currentSegment.category.speedLimit;
-                }
-                
-                // Changer la couleur si vitesse dépassée
-                if (appState.currentSpeed > currentSegment.category.speedLimit) {
-                    speedLimitEl.style.borderColor = '#ef4444';
-                    speedLimitEl.style.animation = 'pulse 0.5s ease-in-out infinite';
-                } else {
-                    speedLimitEl.style.borderColor = '#10b981';
-                    speedLimitEl.style.animation = 'none';
-                }
-            }
-        }
-        
-        // Temps écoulé et restant
-        if (appState.startTime) {
-            const elapsed = (Date.now() - appState.startTime) / 1000 / 60; // minutes
-            const remaining = Math.max(0, appState.duration - elapsed);
-            document.getElementById('timeValue').textContent = `${Math.round(remaining)} min`;
+        // Stats
+        if (state.startTime && state.totalDuration > 0) {
+            const elapsed = (Date.now() - state.startTime) / 1000 / 60;
+            const progress = Math.min(100, (elapsed / state.totalDuration) * 100);
             
-            // Progression
-            const progress = Math.min(100, (elapsed / appState.duration) * 100);
-            document.getElementById('progressBar').style.width = `${progress}%`;
-            document.getElementById('progressPercent').textContent = `${Math.round(progress)}%`;
+            document.getElementById('statDistance').textContent = `${state.totalDistance.toFixed(1)} km`;
+            document.getElementById('statTime').textContent = `${Math.round(elapsed)} min`;
+            document.getElementById('statQuestions').textContent = `${state.correctAnswers}/${state.totalQuestions}`;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = `Progression: ${Math.round(progress)}%`;
             
-            // Distance restante (estimation)
-            const distanceRemaining = appState.totalDistance * (1 - progress / 100);
-            document.getElementById('distanceValue').textContent = `${distanceRemaining.toFixed(1)} km`;
-            
-            // Score questions
-            document.getElementById('scoreValue').textContent = `${appState.correctAnswers}/${appState.totalQuestions}`;
-            
-            // Vérifier fin du parcours
-            if (remaining <= 0 || progress >= 100) {
+            // Fin du parcours
+            if (elapsed >= state.totalDuration) {
                 this.finishDriving();
-            }
-        }
-        
-        // Distance au prochain waypoint
-        if (appState.currentPosition && appState.route.length > 0 && appState.currentWaypoint < appState.route.length) {
-            const nextPoint = appState.route[appState.currentWaypoint];
-            const distance = this.calculateDistance(appState.currentPosition, nextPoint);
-            const distanceMeters = Math.round(distance * 1000);
-            
-            document.getElementById('nextTurnDistance').textContent = distanceMeters > 1000 
-                ? `${(distance).toFixed(1)} km`
-                : `${distanceMeters} m`;
-            
-            document.getElementById('streetName').textContent = `Vers ${nextPoint.category.name}`;
-            
-            // Si proche du waypoint, passer au suivant
-            if (distance < 0.05) { // 50 mètres
-                appState.currentWaypoint++;
             }
         }
     },
     
-    /* ==================== QUESTIONS PÉDAGOGIQUES ==================== */
+    toggleStats() {
+        const panel = document.getElementById('statsPanel');
+        panel.classList.toggle('active');
+    },
+    
+    // ========== QUESTIONS ==========
     
     checkQuestion() {
-        // Éviter de poser trop de questions
-        const timeSinceLastQuestion = Date.now() - appState.lastQuestionTime;
-        if (timeSinceLastQuestion < 60000) return; // Minimum 1 minute entre questions
+        // Ne pas poser trop de questions
+        if (state.totalQuestions >= 5) return;
         
-        if (appState.totalQuestions >= 10) return; // Maximum 10 questions
+        // Attendre au moins 1 minute entre chaque question
+        const timeSinceLastQuestion = Date.now() - state.lastQuestionTime;
+        if (timeSinceLastQuestion < 60000) return;
         
-        // 5% de chance à chaque update GPS
+        // 5% de chance de poser une question à chaque mise à jour GPS
         if (Math.random() > 0.05) return;
         
-        // Trouver la catégorie actuelle
-        if (appState.route.length === 0 || appState.currentWaypoint >= appState.route.length) return;
+        // Sélectionner une question non posée
+        const availableQuestions = CONFIG.QUESTIONS.filter(
+            q => !state.askedQuestions.includes(q.q)
+        );
         
-        const currentSegment = appState.route[appState.currentWaypoint];
-        const categoryId = currentSegment.category.id;
-        
-        if (QUESTIONS[categoryId]) {
-            const questions = QUESTIONS[categoryId];
-            const availableQuestions = questions.filter(q => 
-                !appState.questionsAsked.includes(q.question)
-            );
-            
-            if (availableQuestions.length > 0) {
-                const question = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
-                this.showQuestion(question);
-                appState.lastQuestionTime = Date.now();
-            }
+        if (availableQuestions.length > 0) {
+            const question = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+            this.showQuestion(question);
+            state.lastQuestionTime = Date.now();
         }
     },
     
     showQuestion(question) {
-        appState.questionsAsked.push(question.question);
-        appState.totalQuestions++;
+        state.askedQuestions.push(question.q);
+        state.totalQuestions++;
         
         const modal = document.getElementById('questionModal');
-        const questionText = document.getElementById('questionText');
-        const answersContainer = document.getElementById('answersContainer');
-        const continueBtn = document.getElementById('continueBtn');
+        const text = document.getElementById('questionText');
+        const grid = document.getElementById('answersGrid');
+        const btn = document.getElementById('btnContinue');
         
-        questionText.textContent = question.question;
-        answersContainer.innerHTML = '';
-        continueBtn.classList.remove('visible');
+        text.textContent = question.q;
+        grid.innerHTML = '';
+        btn.classList.remove('active');
         
-        question.answers.forEach((answer, index) => {
-            const btn = document.createElement('button');
-            btn.className = 'answer-btn';
-            btn.textContent = answer;
-            btn.onclick = () => this.selectAnswer(btn, index, question.correct);
-            answersContainer.appendChild(btn);
+        question.a.forEach((answer, index) => {
+            const answerBtn = document.createElement('button');
+            answerBtn.className = 'answer-btn';
+            answerBtn.textContent = answer;
+            answerBtn.onclick = () => this.selectAnswer(answerBtn, index, question.correct);
+            grid.appendChild(answerBtn);
         });
         
         modal.classList.add('active');
@@ -772,26 +727,24 @@ const app = {
     
     selectAnswer(button, index, correctIndex) {
         // Désactiver tous les boutons
-        const buttons = document.querySelectorAll('.answer-btn');
-        buttons.forEach(btn => {
+        document.querySelectorAll('.answer-btn').forEach(btn => {
             btn.onclick = null;
             btn.classList.add('disabled');
         });
         
-        // Marquer la réponse
+        // Marquer la bonne/mauvaise réponse
         if (index === correctIndex) {
             button.classList.add('correct');
-            appState.correctAnswers++;
+            state.correctAnswers++;
+            this.showToast('Bonne réponse ! 👍', 'success');
         } else {
             button.classList.add('incorrect');
-            buttons[correctIndex].classList.add('correct');
+            document.querySelectorAll('.answer-btn')[correctIndex].classList.add('correct');
+            this.showToast('Réponse incorrecte', 'error');
         }
         
         // Afficher le bouton continuer
-        const continueBtn = document.getElementById('continueBtn');
-        continueBtn.classList.add('visible');
-        
-        // Mettre à jour le score
+        document.getElementById('btnContinue').classList.add('active');
         this.updateUI();
     },
     
@@ -799,66 +752,116 @@ const app = {
         document.getElementById('questionModal').classList.remove('active');
     },
     
-    /* ==================== FIN DU PARCOURS ==================== */
+    // ========== DÉMARRAGE/ARRÊT ==========
+    
+    startDriving() {
+        if (state.selectedZones.length < 2) {
+            this.showToast('Sélectionnez au moins 2 zones', 'warning');
+            return;
+        }
+        
+        // Réinitialisation
+        state.currentPosition = null;
+        state.startPosition = null;
+        state.startTime = null;
+        state.route = null;
+        state.instructions = [];
+        state.currentInstructionIndex = 0;
+        state.totalDistance = 0;
+        state.totalDuration = 0;
+        state.askedQuestions = [];
+        state.correctAnswers = 0;
+        state.totalQuestions = 0;
+        state.lastQuestionTime = 0;
+        state.currentSpeed = 0;
+        state.isTracking = true;
+        
+        this.showDriving();
+        
+        setTimeout(() => {
+            this.startGPSTracking();
+        }, 300);
+    },
     
     stopDriving() {
-        if (confirm('❓ Voulez-vous vraiment arrêter le parcours ?')) {
+        if (confirm('❓ Arrêter le parcours ?')) {
             this.finishDriving();
         }
     },
     
     finishDriving() {
-        // Arrêter le GPS
-        if (appState.watchId) {
-            navigator.geolocation.clearWatch(appState.watchId);
-            appState.watchId = null;
-        }
+        this.stopGPSTracking();
         
-        // Calculer les stats
-        const totalTime = appState.startTime 
-            ? Math.round((Date.now() - appState.startTime) / 1000 / 60)
-            : 0;
+        const totalTime = state.startTime ? Math.round((Date.now() - state.startTime) / 1000 / 60) : 0;
         
-        // Afficher la modal de fin
-        document.getElementById('totalDistanceFinal').textContent = `${appState.totalDistance.toFixed(1)} km`;
-        document.getElementById('totalTimeFinal').textContent = `${totalTime} min`;
-        document.getElementById('correctAnswers').textContent = `${appState.correctAnswers}/${appState.totalQuestions}`;
+        document.getElementById('finalDistance').textContent = `${state.totalDistance.toFixed(1)} km`;
+        document.getElementById('finalTime').textContent = `${totalTime} min`;
+        document.getElementById('finalQuestions').textContent = `${state.correctAnswers}/${state.totalQuestions}`;
         
         document.getElementById('finishModal').classList.add('active');
-        
-        // Nettoyer
-        setTimeout(() => {
-            document.getElementById('finishModal').classList.remove('active');
-        }, 10000);
     },
     
-    /* ==================== SON ==================== */
-    
-    toggleSound() {
-        appState.soundEnabled = !appState.soundEnabled;
-        const icon = document.getElementById('soundIcon');
-        if (icon) {
-            icon.className = appState.soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-        }
+    newRoute() {
+        document.getElementById('finishModal').classList.remove('active');
+        setTimeout(() => this.showConfig(), 300);
     },
     
-    /* ==================== UTILITAIRES ==================== */
+    // ========== UTILITAIRES ==========
     
     calculateDistance(pos1, pos2) {
         const R = 6371; // Rayon de la Terre en km
         const dLat = this.toRad(pos2.lat - pos1.lat);
         const dLng = this.toRad(pos2.lng - pos1.lng);
-        
         const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
                   Math.cos(this.toRad(pos1.lat)) * Math.cos(this.toRad(pos2.lat)) *
                   Math.sin(dLng/2) * Math.sin(dLng/2);
-        
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         return R * c;
     },
     
+    calculateBearing(pos1, pos2) {
+        const lat1 = this.toRad(pos1.lat);
+        const lat2 = this.toRad(pos2.lat);
+        const dLng = this.toRad(pos2.lng - pos1.lng);
+        
+        const y = Math.sin(dLng) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) -
+                  Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+        
+        const bearing = Math.atan2(y, x);
+        return (this.toDeg(bearing) + 360) % 360;
+    },
+    
     toRad(degrees) {
         return degrees * Math.PI / 180;
+    },
+    
+    toDeg(radians) {
+        return radians * 180 / Math.PI;
+    },
+    
+    showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-info-circle'
+        };
+        
+        toast.innerHTML = `
+            <i class="fas ${icons[type]}"></i>
+            <span>${message}</span>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 };
 
@@ -868,5 +871,5 @@ document.addEventListener('DOMContentLoaded', () => {
     app.init();
 });
 
-// Exposer l'app globalement pour les onclick du HTML
+// Export global
 window.app = app;
