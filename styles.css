@@ -395,24 +395,26 @@ body {
     font-size: 0.9rem;
 }
 
-/* MAP */
+/* MAP 3D */
 #map {
     position: absolute;
     inset: 0;
     z-index: 1;
 }
 
-.leaflet-routing-container {
+.mapboxgl-canvas {
+    outline: none;
+}
+
+.mapboxgl-ctrl-logo,
+.mapboxgl-ctrl-attrib {
     display: none !important;
 }
 
-.leaflet-container {
-    background: #e5e7eb;
-}
-
-/* Marker utilisateur */
-.user-marker {
-    z-index: 1000 !important;
+/* Marker 3D personnalisé */
+.user-marker-3d {
+    cursor: pointer;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
 }
 
 /* SPEED WIDGET */
@@ -711,7 +713,7 @@ body {
     display: none;
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(10px);
     z-index: 700;
     flex-direction: column;
@@ -736,6 +738,17 @@ body {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+.loader p {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.loader small {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* MODAL */

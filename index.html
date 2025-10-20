@@ -1,280 +1,303 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#6366f1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Drive Lyon - Formation GPS</title>
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    
-    <!-- Leaflet Routing Machine CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Notre CSS -->
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+  <meta name="theme-color" content="#6366f1" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Drive Lyon - Formation GPS</title>
+
+  <!-- Mapbox GL JS -->
+  <link
+    href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css"
+    rel="stylesheet"
+  />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <!-- ÉCRAN D'ACCUEIL -->
-    <div id="homeScreen" class="screen active">
-        <div class="home-bg"></div>
-        <div class="home-content">
-            <div class="home-logo">🚗</div>
-            <h1 class="home-title">Drive Lyon</h1>
-            <p class="home-subtitle">Formation de conduite avec GPS</p>
-            <button class="btn-primary" onclick="app.showConfig()">
-                Commencer
-                <i class="fas fa-arrow-right"></i>
-            </button>
-        </div>
+  <!-- ÉCRAN D'ACCUEIL -->
+  <div id="homeScreen" class="screen active">
+    <div class="home-bg"></div>
+    <div class="home-content">
+      <div class="home-logo">🚗</div>
+      <h1 class="home-title">Drive Lyon</h1>
+      <p class="home-subtitle">Formation de conduite avec GPS</p>
+      <button class="btn-primary" onclick="app.showConfig()">
+        Commencer
+        <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ÉCRAN CONFIGURATION -->
+  <div id="configScreen" class="screen">
+    <div class="header">
+      <button class="btn-back" onclick="app.showHome()">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h1>Configuration</h1>
+      <div class="spacer"></div>
     </div>
 
-    <!-- ÉCRAN CONFIGURATION -->
-    <div id="configScreen" class="screen">
-        <div class="header">
-            <button class="btn-back" onclick="app.showHome()">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h1>Configuration</h1>
-            <div class="spacer"></div>
+    <div class="content">
+      <!-- Zones géographiques -->
+      <div class="section">
+        <div class="section-header">
+          <i class="fas fa-map-marker-alt section-icon"></i>
+          <div>
+            <h3>Zones de conduite</h3>
+            <p class="text-muted">Sélectionnez vos zones (2 minimum)</p>
+          </div>
         </div>
+        <div class="zones-grid" id="zonesGrid"></div>
+      </div>
 
-        <div class="content">
-            <!-- Zones géographiques -->
-            <div class="section">
-                <div class="section-header">
-                    <i class="fas fa-map-marker-alt section-icon"></i>
-                    <div>
-                        <h3>Zones de conduite</h3>
-                        <p class="text-muted">Sélectionnez vos zones (2 minimum)</p>
-                    </div>
-                </div>
-                <div class="zones-grid" id="zonesGrid"></div>
-            </div>
-
-            <!-- Durée -->
-            <div class="section">
-                <div class="section-header">
-                    <i class="fas fa-clock section-icon"></i>
-                    <div>
-                        <h3>Durée du parcours</h3>
-                        <p class="text-muted" id="durationLabel">30 minutes</p>
-                    </div>
-                </div>
-                <input type="range" id="durationSlider" min="15" max="120" step="15" value="30" class="slider">
-                <div class="slider-labels">
-                    <span>15min</span>
-                    <span>120min</span>
-                </div>
-            </div>
-
-            <!-- Type de véhicule -->
-            <div class="section">
-                <div class="section-header">
-                    <i class="fas fa-car section-icon"></i>
-                    <div>
-                        <h3>Icône de navigation</h3>
-                        <p class="text-muted">Votre symbole sur la carte</p>
-                    </div>
-                </div>
-                <div class="vehicle-grid">
-                    <div class="vehicle-card active" data-vehicle="car" onclick="app.selectVehicle('car')">
-                        <i class="fas fa-car"></i>
-                        <span>Voiture</span>
-                    </div>
-                    <div class="vehicle-card" data-vehicle="motorcycle" onclick="app.selectVehicle('motorcycle')">
-                        <i class="fas fa-motorcycle"></i>
-                        <span>Moto</span>
-                    </div>
-                </div>
-            </div>
-
-            <button class="btn-start" onclick="app.startDriving()">
-                <i class="fas fa-play"></i>
-                <span>Lancer le parcours</span>
-            </button>
+      <!-- Durée -->
+      <div class="section">
+        <div class="section-header">
+          <i class="fas fa-clock section-icon"></i>
+          <div>
+            <h3>Durée du parcours</h3>
+            <p class="text-muted" id="durationLabel">30 minutes</p>
+          </div>
         </div>
+        <input
+          type="range"
+          id="durationSlider"
+          min="15"
+          max="120"
+          step="15"
+          value="30"
+          class="slider"
+        />
+        <div class="slider-labels">
+          <span>15min</span>
+          <span>120min</span>
+        </div>
+      </div>
+
+      <!-- Type de véhicule -->
+      <div class="section">
+        <div class="section-header">
+          <i class="fas fa-car section-icon"></i>
+          <div>
+            <h3>Icône de navigation</h3>
+            <p class="text-muted">Votre symbole sur la carte</p>
+          </div>
+        </div>
+        <div class="vehicle-grid">
+          <div
+            class="vehicle-card active"
+            data-vehicle="car"
+            onclick="app.selectVehicle('car')"
+          >
+            <i class="fas fa-car"></i>
+            <span>Voiture</span>
+          </div>
+          <div
+            class="vehicle-card"
+            data-vehicle="motorcycle"
+            onclick="app.selectVehicle('motorcycle')"
+          >
+            <i class="fas fa-motorcycle"></i>
+            <span>Moto</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-start" onclick="app.startDriving()">
+        <i class="fas fa-play"></i>
+        <span>Lancer le parcours</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ÉCRAN DE CONDUITE -->
+  <div id="drivingScreen" class="screen">
+    <!-- Header -->
+    <div class="driving-header">
+      <button class="btn-stop" onclick="app.stopDriving()">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="gps-indicator">
+        <i class="fas fa-satellite-dish"></i>
+        <span id="gpsStatus">GPS</span>
+      </div>
     </div>
 
-    <!-- ÉCRAN DE CONDUITE -->
-    <div id="drivingScreen" class="screen">
-        <!-- Header -->
-        <div class="driving-header">
-            <button class="btn-stop" onclick="app.stopDriving()">
-                <i class="fas fa-times"></i>
-            </button>
-            <div class="gps-indicator">
-                <i class="fas fa-satellite-dish"></i>
-                <span id="gpsStatus">GPS</span>
-            </div>
-        </div>
+    <!-- Carte -->
+    <div id="map"></div>
 
-        <!-- Carte -->
-        <div id="map"></div>
-
-        <!-- Widget vitesse -->
-        <div class="speed-widget">
-            <div class="speed-value" id="speedValue">0</div>
-            <div class="speed-unit">km/h</div>
-            <div class="speed-limit" id="speedLimit">50</div>
-        </div>
-
-        <!-- Navigation card -->
-        <div class="nav-card">
-            <div class="nav-icon">
-                <i class="fas fa-arrow-up" id="navIcon"></i>
-            </div>
-            <div class="nav-info">
-                <div class="nav-distance" id="navDistance">--</div>
-                <div class="nav-street" id="navStreet">Recherche GPS...</div>
-                <div class="nav-time" id="navTime"></div>
-            </div>
-        </div>
-
-        <!-- Liste des prochaines instructions -->
-        <div class="next-instructions" id="nextInstructions">
-            <div class="next-title">
-                <i class="fas fa-list"></i>
-                Prochaines directions
-            </div>
-            <div class="next-list" id="nextList"></div>
-        </div>
-
-        <!-- Actions -->
-        <div class="action-buttons">
-            <button class="btn-action" onclick="app.recenterMap()">
-                <i class="fas fa-location-arrow"></i>
-            </button>
-            <button class="btn-action" onclick="app.toggleInstructions()">
-                <i class="fas fa-route"></i>
-            </button>
-            <button class="btn-action" onclick="app.toggleStats()">
-                <i class="fas fa-chart-bar"></i>
-            </button>
-        </div>
-
-        <!-- Panel statistiques -->
-        <div class="stats-panel" id="statsPanel">
-            <div class="stats-header">
-                <h3>Statistiques</h3>
-                <button class="btn-close" onclick="app.toggleStats()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <i class="fas fa-route"></i>
-                    <strong id="statDistance">0 km</strong>
-                    <span>Distance</span>
-                </div>
-                <div class="stat-item">
-                    <i class="fas fa-clock"></i>
-                    <strong id="statTime">0 min</strong>
-                    <span>Temps</span>
-                </div>
-                <div class="stat-item">
-                    <i class="fas fa-check-circle"></i>
-                    <strong id="statQuestions">0/0</strong>
-                    <span>Questions</span>
-                </div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            <p class="progress-text" id="progressText">Progression: 0%</p>
-        </div>
-
-        <!-- Loader -->
-        <div class="loader" id="loader">
-            <div class="spinner"></div>
-            <p id="loaderText">Génération du parcours...</p>
-            <small id="loaderDetail">Calcul de l'itinéraire optimal</small>
-        </div>
+    <!-- Widget vitesse -->
+    <div class="speed-widget">
+      <div class="speed-value" id="speedValue">0</div>
+      <div class="speed-unit">km/h</div>
+      <div class="speed-limit" id="speedLimit">50</div>
     </div>
 
-    <!-- MODAL QUESTION -->
-    <div class="modal" id="questionModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon">
-                    <i class="fas fa-question"></i>
-                </div>
-                <h2>Question de conduite</h2>
-            </div>
-            <p class="question-text" id="questionText"></p>
-            <div class="answers-grid" id="answersGrid"></div>
-            <button class="btn-continue" id="btnContinue" onclick="app.closeQuestion()">
-                Continuer
-            </button>
-        </div>
+    <!-- Navigation card -->
+    <div class="nav-card">
+      <div class="nav-icon">
+        <i class="fas fa-arrow-up" id="navIcon"></i>
+      </div>
+      <div class="nav-info">
+        <div class="nav-distance" id="navDistance">--</div>
+        <div class="nav-street" id="navStreet">Recherche GPS...</div>
+        <div class="nav-time" id="navTime"></div>
+      </div>
     </div>
 
-    <!-- MODAL FIN -->
-    <div class="modal" id="finishModal">
-        <div class="modal-content finish-content">
-            <div class="finish-icon">
-                <i class="fas fa-flag-checkered"></i>
-            </div>
-            <h2>Parcours terminé !</h2>
-            <p class="finish-subtitle">Excellent travail</p>
-            
-            <div class="finish-stats">
-                <div class="finish-stat">
-                    <i class="fas fa-route"></i>
-                    <div>
-                        <strong id="finalDistance">0 km</strong>
-                        <span>Distance</span>
-                    </div>
-                </div>
-                <div class="finish-stat">
-                    <i class="fas fa-clock"></i>
-                    <div>
-                        <strong id="finalTime">0 min</strong>
-                        <span>Temps</span>
-                    </div>
-                </div>
-                <div class="finish-stat">
-                    <i class="fas fa-check-circle"></i>
-                    <div>
-                        <strong id="finalQuestions">0/0</strong>
-                        <span>Réponses correctes</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="finish-buttons">
-                <button class="btn-secondary" onclick="app.newRoute()">
-                    <i class="fas fa-redo"></i>
-                    Nouveau
-                </button>
-                <button class="btn-primary" onclick="app.showHome()">
-                    <i class="fas fa-home"></i>
-                    Accueil
-                </button>
-            </div>
-        </div>
+    <!-- Liste des prochaines instructions -->
+    <div class="next-instructions" id="nextInstructions">
+      <div class="next-title">
+        <i class="fas fa-list"></i>
+        Prochaines directions
+      </div>
+      <div class="next-list" id="nextList"></div>
     </div>
 
-    <!-- Toast container -->
-    <div id="toastContainer"></div>
+    <!-- Actions -->
+    <div class="action-buttons">
+      <button class="btn-action" onclick="app.recenterMap()">
+        <i class="fas fa-location-arrow"></i>
+      </button>
+      <button class="btn-action" onclick="app.toggleInstructions()">
+        <i class="fas fa-route"></i>
+      </button>
+      <button class="btn-action" onclick="app.toggleStats()">
+        <i class="fas fa-chart-bar"></i>
+      </button>
+    </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
-    
-    <!-- Turf.js pour calculs géographiques précis -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
-    
-    <!-- Notre JavaScript -->
-    <script src="script.js"></script>
+    <!-- Panel statistiques -->
+    <div class="stats-panel" id="statsPanel">
+      <div class="stats-header">
+        <h3>Statistiques</h3>
+        <button class="btn-close" onclick="app.toggleStats()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <i class="fas fa-route"></i>
+          <strong id="statDistance">0 km</strong>
+          <span>Distance</span>
+        </div>
+        <div class="stat-item">
+          <i class="fas fa-clock"></i>
+          <strong id="statTime">0 min</strong>
+          <span>Temps</span>
+        </div>
+        <div class="stat-item">
+          <i class="fas fa-check-circle"></i>
+          <strong id="statQuestions">0/0</strong>
+          <span>Questions</span>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <p class="progress-text" id="progressText">Progression: 0%</p>
+    </div>
+
+    <!-- Loader -->
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <p id="loaderText">Génération du parcours...</p>
+      <small id="loaderDetail">Calcul de l'itinéraire optimal</small>
+    </div>
+  </div>
+
+  <!-- MODAL QUESTION -->
+  <div class="modal" id="questionModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-icon">
+          <i class="fas fa-question"></i>
+        </div>
+        <h2>Question de conduite</h2>
+      </div>
+      <p class="question-text" id="questionText"></p>
+      <div class="answers-grid" id="answersGrid"></div>
+      <button class="btn-continue" id="btnContinue" onclick="app.closeQuestion()">
+        Continuer
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL FIN -->
+  <div class="modal" id="finishModal">
+    <div class="modal-content finish-content">
+      <div class="finish-icon">
+        <i class="fas fa-flag-checkered"></i>
+      </div>
+      <h2>Parcours terminé !</h2>
+      <p class="finish-subtitle">Excellent travail</p>
+
+      <div class="finish-stats">
+        <div class="finish-stat">
+          <i class="fas fa-route"></i>
+          <div>
+            <strong id="finalDistance">0 km</strong>
+            <span>Distance</span>
+          </div>
+        </div>
+        <div class="finish-stat">
+          <i class="fas fa-clock"></i>
+          <div>
+            <strong id="finalTime">0 min</strong>
+            <span>Temps</span>
+          </div>
+        </div>
+        <div class="finish-stat">
+          <i class="fas fa-check-circle"></i>
+          <div>
+            <strong id="finalQuestions">0/0</strong>
+            <span>Réponses correctes</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="finish-buttons">
+        <button class="btn-secondary" onclick="app.newRoute()">
+          <i class="fas fa-redo"></i>
+          Nouveau
+        </button>
+        <button class="btn-primary" onclick="app.showHome()">
+          <i class="fas fa-home"></i>
+          Accueil
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toastContainer"></div>
+
+  <!-- Turf.js pour calculs géographiques -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+
+  <!-- App -->
+  <script src="script.js"></script>
 </body>
 </html>
