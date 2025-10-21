@@ -29,6 +29,8 @@ body {
     height: 100vh;
     width: 100vw;
     position: fixed;
+    margin: 0;
+    padding: 0;
 }
 
 /* ÉCRANS */
@@ -37,6 +39,8 @@ body {
     position: fixed;
     inset: 0;
     flex-direction: column;
+    margin: 0;
+    padding: 0;
 }
 
 .screen.active {
@@ -52,74 +56,74 @@ body {
 /* ==================== HOME SCREEN REDESIGN ==================== */
 #homeScreen {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     position: relative;
     overflow: hidden;
+    padding: 0;
 }
 
 .home-bg {
     position: absolute;
     inset: 0;
     background: 
-        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1), transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.2), transparent 50%);
-    animation: bgFloat 15s ease-in-out infinite;
-}
-
-@keyframes bgFloat {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-20px) scale(1.05); }
+        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.08), transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.15), transparent 50%);
+    pointer-events: none;
 }
 
 .home-content {
     position: relative;
     z-index: 1;
     text-align: center;
-    padding: 2rem;
-    max-width: 400px;
+    padding: 0;
     width: 100%;
-    animation: slideUpFade 0.8s ease-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    animation: fadeInScale 0.6s ease-out;
 }
 
-@keyframes slideUpFade {
+@keyframes fadeInScale {
     from {
         opacity: 0;
-        transform: translateY(40px);
+        transform: scale(0.95);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: scale(1);
     }
 }
 
 .home-logo {
-    font-size: 5.5rem;
+    font-size: 6rem;
     margin-bottom: 1.5rem;
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
-    animation: floatLogo 3s ease-in-out infinite;
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.25));
+    animation: gentleBounce 2.5s ease-in-out infinite;
 }
 
-@keyframes floatLogo {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-10px) rotate(2deg); }
+@keyframes gentleBounce {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
 }
 
 .home-title {
-    font-size: 3rem;
+    font-size: 3.2rem;
     font-weight: 800;
     color: white;
-    margin-bottom: 0.75rem;
-    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    letter-spacing: -0.03em;
 }
 
 .home-subtitle {
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.85);
-    margin-bottom: 3.5rem;
+    font-size: 1.15rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 4rem;
     font-weight: 400;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
 }
 
 /* BUTTONS */
@@ -127,42 +131,22 @@ body {
     background: white;
     color: var(--primary);
     border: none;
-    padding: 1.1rem 2.5rem;
-    font-size: 1.1rem;
+    padding: 1.15rem 2.5rem;
+    font-size: 1.05rem;
     font-weight: 700;
     border-radius: 16px;
     cursor: pointer;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
     font-family: inherit;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-primary::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(99, 102, 241, 0.1);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-}
-
-.btn-primary:active::before {
-    width: 300px;
-    height: 300px;
 }
 
 .btn-primary:active {
-    transform: scale(0.96);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: scale(0.97);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
 }
 
 .btn-primary i {
@@ -170,7 +154,7 @@ body {
 }
 
 .btn-primary:active i {
-    transform: translateX(4px);
+    transform: translateX(3px);
 }
 
 .btn-secondary {
@@ -385,7 +369,7 @@ body {
 /* START BUTTON */
 .btn-start {
     width: 100%;
-    background: linear-gradient(135deg, var(--success), #059669);
+   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: white;
     border: none;
     padding: 1.25rem;
@@ -409,89 +393,46 @@ body {
 /* ==================== BOUTON NAVIGATION REDESIGN ==================== */
 .btn-start-navigation {
     position: fixed;
-    bottom: 140px;
+    bottom: 35px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 500;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
     color: white;
     border: none;
-    padding: 1.2rem 2.8rem;
-    font-size: 1.15rem;
+    padding: 1.15rem 2.5rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    border-radius: 20px;
+    border-radius: 18px;
     cursor: pointer;
-    box-shadow: 
-        0 8px 24px rgba(16, 185, 129, 0.3),
-        0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
     display: flex;
     align-items: center;
-    gap: 0.85rem;
+    justify-content: center;
+    gap: 0.75rem;
     font-family: 'Inter', sans-serif;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    backdrop-filter: blur(10px);
-    letter-spacing: 0.02em;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    letter-spacing: 0.015em;
+    min-width: 220px;
 }
 
-.btn-start-navigation::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-}
-
-.btn-start-navigation:active::before {
-    width: 400px;
-    height: 400px;
+.btn-start-navigation:hover {
+    box-shadow: 0 10px 28px rgba(99, 102, 241, 0.45);
+    opacity: 0.95;
 }
 
 .btn-start-navigation:active {
-    transform: translateX(-50%) scale(0.96);
-    box-shadow: 
-        0 4px 16px rgba(16, 185, 129, 0.4),
-        0 1px 4px rgba(0, 0, 0, 0.1);
+    transform: translateX(-50%) scale(0.98);
+    box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
 }
 
 .btn-start-navigation i {
-    font-size: 1.3rem;
-    transition: transform 0.3s;
-    position: relative;
-    z-index: 1;
-}
-
-.btn-start-navigation span {
-    position: relative;
-    z-index: 1;
+    font-size: 1.2rem;
+    transition: transform 0.2s ease;
 }
 
 .btn-start-navigation:active i {
     transform: translateX(3px);
-}
-
-/* Animation douce au lieu du pulse agressif */
-@keyframes gentleGlow {
-    0%, 100% { 
-        box-shadow: 
-            0 8px 24px rgba(16, 185, 129, 0.3),
-            0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    50% { 
-        box-shadow: 
-            0 12px 32px rgba(16, 185, 129, 0.4),
-            0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-}
-
-.btn-start-navigation {
-    animation: gentleGlow 3s ease-in-out infinite;
 }
 
 /* DRIVING SCREEN */
@@ -587,6 +528,24 @@ body {
     font-size: 0.7rem;
     color: var(--text-muted);
     font-weight: 600;
+}
+
+.speed-limit {
+    position: absolute;
+    bottom: -10px;
+    right: -10px;
+    width: 38px;
+    height: 38px;
+    background: var(--danger);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 800;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .speed-limit {
@@ -745,7 +704,7 @@ body {
 /* ACTION BUTTONS */
 .action-buttons {
     position: absolute;
-    bottom: 30px;
+    bottom: 100px;
     right: 20px;
     z-index: 400;
     display: flex;
@@ -1164,14 +1123,20 @@ body {
 /* RESPONSIVE MOBILE OPTIMIZATIONS */
 @media (max-width: 480px) {
     .home-logo {
-        font-size: 4.5rem;
+        font-size: 5rem;
     }
     
     .home-title {
-        font-size: 2.5rem;
+        font-size: 2.6rem;
     }
     
     .home-subtitle {
+        font-size: 1rem;
+        padding: 0 1.5rem;
+    }
+    
+    .btn-primary {
+        padding: 1rem 2rem;
         font-size: 1rem;
     }
     
@@ -1192,29 +1157,41 @@ body {
     }
     
     .btn-start-navigation {
-        bottom: 120px;
-        padding: 1.1rem 2.3rem;
-        font-size: 1.05rem;
+        bottom: 25px;
+        padding: 0.95rem 1.8rem;
+        font-size: 0.95rem;
+        min-width: 180px;
     }
     
     .speed-widget {
         width: 85px;
         height: 85px;
+        bottom: 25px;
+        left: 15px;
     }
     
     .speed-value {
         font-size: 2rem;
     }
+    
+    .action-buttons {
+        bottom: 95px;
+        right: 15px;
+    }
 }
 
 @media (max-width: 360px) {
-    .home-content {
-        padding: 1.5rem;
+    .home-logo {
+        font-size: 4.5rem;
+    }
+    
+    .home-title {
+        font-size: 2.3rem;
     }
     
     .btn-primary {
-        padding: 1rem 2rem;
-        font-size: 1rem;
+        padding: 0.95rem 1.8rem;
+        font-size: 0.95rem;
     }
     
     .nav-card {
@@ -1226,16 +1203,18 @@ body {
         height: 60px;
         font-size: 2rem;
     }
+    
+    .btn-start-navigation {
+        padding: 0.9rem 1.6rem;
+        font-size: 0.9rem;
+        min-width: 160px;
+    }
 }
 
 /* Safe area pour les notches iPhone */
 @supports (padding: max(0px)) {
-    .home-content {
-        padding-bottom: max(2rem, env(safe-area-inset-bottom));
-    }
-    
     .btn-start-navigation {
-        bottom: max(140px, calc(140px + env(safe-area-inset-bottom)));
+        bottom: max(30px, calc(30px + env(safe-area-inset-bottom)));
     }
     
     .speed-widget {
@@ -1243,6 +1222,7 @@ body {
     }
     
     .action-buttons {
-        bottom: max(30px, calc(30px + env(safe-area-inset-bottom)));
+        bottom: max(100px, calc(100px + env(safe-area-inset-bottom)));
     }
 }
+
