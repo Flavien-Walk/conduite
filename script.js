@@ -1,6 +1,5 @@
 /* ==================== CONFIGURATION ==================== */
 
-// Vérification chargement des librairies
 if (typeof mapboxgl === 'undefined') {
   console.error('❌ Mapbox GL JS non chargé !');
   alert('Erreur : Mapbox GL JS non chargé. Vérifiez votre connexion internet.');
@@ -10,7 +9,6 @@ if (typeof turf === 'undefined') {
   alert('Erreur : Turf.js non chargé. Vérifiez votre connexion internet.');
 }
 
-// ⚠️ Ton token Mapbox
 mapboxgl.accessToken = 'pk.eyJ1Ijoid2F6ZXRlc3R3YXplIiwiYSI6ImNtZDMxOXQ3YjFmNWUybHFucXg1dGM2Z2YifQ.5cGV03JsDPzm1QV-LNikFA';
 
 const CONFIG = {
@@ -41,7 +39,6 @@ const CONFIG = {
 
   DEFAULT_SPEED_LIMIT: 50,
   
-  // Configuration caméra
   CAMERA: {
     MIN_ZOOM: 17.5,
     MAX_ZOOM: 19,
@@ -51,43 +48,28 @@ const CONFIG = {
     LOOK_AHEAD_DISTANCE: 50,
     PREVIEW_ZOOM: 15,
     PREVIEW_PITCH: 60
+  },
+  
+  // 🌓 Styles jour/nuit
+  MAP_STYLES: {
+    day: 'mapbox://styles/mapbox/streets-v12',
+    night: 'mapbox://styles/mapbox/dark-v11'
   }
 };
 
-/* ==================== TRADUCTION FALLBACK ==================== */
+/* ==================== TRADUCTION ==================== */
 
 const TRANSLATION_DICT = {
-  // Directions
-  'left': 'gauche',
-  'right': 'droite',
-  'straight': 'tout droit',
-  'slight': 'légèrement',
-  'sharp': 'fortement',
-  'turn': 'tourner',
-  'roundabout': 'rond-point',
-  'rotary': 'rond-point',
-  'u-turn': 'demi-tour',
-  'merge': 's\'insérer',
-  'ramp': 'bretelle',
-  'fork': 'bifurcation',
-  'continue': 'continuer',
-  'proceed': 'continuer',
-  'head': 'se diriger',
-  'take': 'prendre',
-  'exit': 'sortie',
-  'arrive': 'arriver',
-  'destination': 'destination',
-  'the': 'la',
-  'on': 'sur',
-  'onto': 'sur',
-  'toward': 'vers',
-  'towards': 'vers',
-  'at': 'à',
-  'in': 'dans',
-  'meters': 'mètres',
-  'kilometers': 'kilomètres',
-  'you have arrived': 'vous êtes arrivé',
-  'your destination': 'votre destination'
+  'left': 'gauche', 'right': 'droite', 'straight': 'tout droit',
+  'slight': 'légèrement', 'sharp': 'fortement', 'turn': 'tourner',
+  'roundabout': 'rond-point', 'rotary': 'rond-point', 'u-turn': 'demi-tour',
+  'merge': 's\'insérer', 'ramp': 'bretelle', 'fork': 'bifurcation',
+  'continue': 'continuer', 'proceed': 'continuer', 'head': 'se diriger',
+  'take': 'prendre', 'exit': 'sortie', 'arrive': 'arriver',
+  'destination': 'destination', 'the': 'la', 'on': 'sur', 'onto': 'sur',
+  'toward': 'vers', 'towards': 'vers', 'at': 'à', 'in': 'dans',
+  'meters': 'mètres', 'kilometers': 'kilomètres',
+  'you have arrived': 'vous êtes arrivé', 'your destination': 'votre destination'
 };
 
 function detectLanguage(text) {
@@ -98,40 +80,66 @@ function detectLanguage(text) {
 
 function translateIfNeeded(instruction) {
   if (!instruction) return instruction;
+  if (detectLanguage(instruction) === 'fr') return instruction;
   
-  // Vérifier si déjà en français
-  if (detectLanguage(instruction) === 'fr') {
-    return instruction;
-  }
-  
-  // Appliquer la traduction mot à mot
   let translated = instruction;
-  
-  // Remplacer les expressions complètes d'abord
   Object.keys(TRANSLATION_DICT).forEach(en => {
     const fr = TRANSLATION_DICT[en];
     const regex = new RegExp('\\b' + en + '\\b', 'gi');
     translated = translated.replace(regex, fr);
   });
-  
   return translated;
 }
 
 function formatDistance(meters) {
-  if (meters < 1000) {
-    return `${Math.round(meters)} m`;
-  } else {
-    return `${(meters / 1000).toFixed(1)} km`;
-  }
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
 }
 
 function formatTime(minutes) {
-  if (minutes < 1) {
-    return `${Math.round(minutes * 60)} sec`;
-  } else {
-    return `${Math.round(minutes)} min`;
-  }
+  if (minutes < 1) return `${Math.round(minutes * 60)} sec`;
+  return `${Math.round(minutes)} min`;
 }
+
+/* ==================== 📢 SYNTHÈSE VOCALE ==================== */
+
+const voiceSystem = {
+  enabled: true,
+  synthesis: window.speechSynthesis,
+  lastAnnouncement: null,
+  
+  speak(text, priority = 'normal') {
+    if (!this.enabled || !this.synthesis) return;
+    
+    // Éviter répétitions
+    if (this.lastAnnouncement === text && Date.now() - this.lastAnnouncementTime < 5000) {
+      return;
+    }
+    
+    // Annuler si parole en cours pour priorité haute
+    if (priority === 'high') {
+      this.synthesis.cancel();
+    }
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-FR';
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    this.synthesis.speak(utterance);
+    this.lastAnnouncement = text;
+    this.lastAnnouncementTime = Date.now();
+  },
+  
+  toggle() {
+    this.enabled = !this.enabled;
+    if (!this.enabled) {
+      this.synthesis.cancel();
+    }
+    return this.enabled;
+  }
+};
 
 /* ==================== ÉTAT ==================== */
 
@@ -163,7 +171,102 @@ const state = {
   use3D: false,
   isPreviewMode: true,
   navigationStarted: false,
-  gpsRetries: 0
+  gpsRetries: 0,
+  
+  // 📊 Statistiques avancées
+  stats: {
+    maxSpeed: 0,
+    avgSpeed: 0,
+    speedSum: 0,
+    speedCount: 0,
+    speedViolations: [],
+    harshBrakings: 0,
+    lastSpeed: 0,
+    score: 100
+  },
+  
+  // 🌓 Mode nuit
+  isDarkMode: false,
+  
+  // 👨‍🏫 Mode accompagnateur
+  supervisorNotes: {
+    positive: [],
+    negative: [],
+    general: ''
+  }
+};
+
+/* ==================== 📝 HISTORIQUE PARCOURS ==================== */
+
+const historyManager = {
+  save(data) {
+    try {
+      const history = this.getAll();
+      history.unshift({
+        id: Date.now(),
+        date: new Date().toISOString(),
+        ...data
+      });
+      
+      // Garder max 50 parcours
+      if (history.length > 50) history.pop();
+      
+      localStorage.setItem('driveLyonHistory', JSON.stringify(history));
+      console.log('✅ Parcours sauvegardé');
+    } catch (e) {
+      console.error('❌ Erreur sauvegarde:', e);
+    }
+  },
+  
+  getAll() {
+    try {
+      const data = localStorage.getItem('driveLyonHistory');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+  
+  clear() {
+    localStorage.removeItem('driveLyonHistory');
+  },
+  
+  export() {
+    const history = this.getAll();
+    const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `drive-lyon-history-${Date.now()}.json`;
+    a.click();
+  }
+};
+
+/* ==================== 🌓 GESTION JOUR/NUIT ==================== */
+
+const themeManager = {
+  isDarkMode() {
+    const hour = new Date().getHours();
+    return hour >= 19 || hour < 7;
+  },
+  
+  apply(map, forceDark = null) {
+    const dark = forceDark !== null ? forceDark : this.isDarkMode();
+    const style = dark ? CONFIG.MAP_STYLES.night : CONFIG.MAP_STYLES.day;
+    
+    if (map) {
+      map.setStyle(style);
+      console.log(`🌓 Style: ${dark ? 'Nuit' : 'Jour'}`);
+    }
+    
+    return dark;
+  },
+  
+  toggle(map) {
+    state.isDarkMode = !state.isDarkMode;
+    this.apply(map, state.isDarkMode);
+    return state.isDarkMode;
+  }
 };
 
 /* ==================== APPLICATION ==================== */
@@ -172,19 +275,32 @@ const app = {
   lastRouteUpdateLog: null,
   lastRecalculation: null,
   speedLimitErrors: 0,
+  lastSpeedLimitCheck: null,
+  lastVoiceInstruction: null,
   
   init() {
-    console.log('🚗 Drive Lyon - Navigation 2D FR');
+    console.log('🚗 Drive Lyon - Version Complète');
     
     if (typeof THREE !== 'undefined') {
       state.use3D = true;
-      console.log('✅ Three.js détecté - Mode 3D activé');
-    } else {
-      console.warn('⚠️ Three.js non disponible - Mode 2D classique');
+      console.log('✅ Three.js détecté');
     }
     
     this.renderZones();
     this.setupSlider();
+    this.checkVoiceSupport();
+    
+    // Détecter mode nuit automatiquement
+    state.isDarkMode = themeManager.isDarkMode();
+  },
+  
+  checkVoiceSupport() {
+    if (!window.speechSynthesis) {
+      console.warn('⚠️ Synthèse vocale non supportée');
+      voiceSystem.enabled = false;
+    } else {
+      console.log('✅ Synthèse vocale disponible');
+    }
   },
 
   // ========== ÉCRANS ==========
@@ -193,15 +309,24 @@ const app = {
     document.getElementById('homeScreen').classList.add('active');
     this.stopGPSTracking();
     this.cleanupMap();
+    document.getElementById('finishModal').classList.remove('active');
+    document.getElementById('questionModal').classList.remove('active');
+    
+    // Fermer panneau accompagnateur
+    const supervisorPanel = document.getElementById('supervisorPanel');
+    if (supervisorPanel) supervisorPanel.classList.remove('active');
   },
+  
   showConfig() {
     this.hideAllScreens();
     document.getElementById('configScreen').classList.add('active');
   },
+  
   showDriving() {
     this.hideAllScreens();
     document.getElementById('drivingScreen').classList.add('active');
   },
+  
   hideAllScreens() {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   },
@@ -219,6 +344,7 @@ const app = {
       grid.appendChild(chip);
     });
   },
+  
   toggleZone(zoneId) {
     const chip = document.querySelector(`[data-zone-id="${zoneId}"]`);
     chip.classList.toggle('selected');
@@ -226,6 +352,7 @@ const app = {
     if (index > -1) state.selectedZones.splice(index, 1);
     else state.selectedZones.push(zoneId);
   },
+  
   setupSlider() {
     const slider = document.getElementById('durationSlider');
     const label = document.getElementById('durationLabel');
@@ -234,6 +361,7 @@ const app = {
       label.textContent = `${state.duration} minutes`;
     });
   },
+  
   selectVehicle(vehicle) {
     state.vehicle = vehicle;
     document.querySelectorAll('.vehicle-card').forEach(card => {
@@ -243,13 +371,12 @@ const app = {
 
   // ========== GPS ==========
   startGPSTracking() {
-    console.log('📍 Démarrage GPS RÉEL...');
+    console.log('📍 Démarrage GPS...');
     document.getElementById('loaderText').textContent = 'Activation GPS...';
     document.getElementById('loaderDetail').textContent = 'Autorisation requise';
 
     if (!navigator.geolocation) {
-      this.showToast('❌ GPS non disponible sur cet appareil', 'error');
-      document.getElementById('loaderDetail').textContent = 'GPS non supporté';
+      this.showToast('❌ GPS non disponible', 'error');
       return;
     }
 
@@ -260,8 +387,6 @@ const app = {
         maximumAge: 5000
       };
       
-      console.log('📡 Recherche signal GPS...');
-      
       navigator.geolocation.getCurrentPosition(
         (position) => this.onGPSSuccess(position),
         (error) => this.handleGPSError(error),
@@ -271,9 +396,7 @@ const app = {
       state.watchId = navigator.geolocation.watchPosition(
         (pos) => this.onGPSUpdate(pos),
         (err) => {
-          if (err.code !== 3) {
-            console.warn('⚠️ GPS update:', err);
-          }
+          if (err.code !== 3) console.warn('⚠️ GPS update:', err);
         },
         gpsOptions
       );
@@ -283,11 +406,9 @@ const app = {
       if (navigator.permissions && navigator.permissions.query) {
         navigator.permissions.query({ name: 'geolocation' }).then((res) => {
           if (res.state === 'denied') {
-            this.showToast('❌ Autorisation GPS refusée. Activez-la dans les paramètres.', 'error');
-            document.getElementById('loaderDetail').textContent = 'Permission refusée';
+            this.showToast('❌ Autorisation GPS refusée', 'error');
             return;
           }
-          document.getElementById('loaderDetail').textContent = 'Recherche satellite GPS...';
           askPosition();
         }).catch(() => askPosition());
       } else {
@@ -303,49 +424,32 @@ const app = {
     switch (error.code) {
       case error.PERMISSION_DENIED:
         message = 'Permission GPS refusée';
-        detail = 'Activez la géolocalisation dans les paramètres';
         this.showToast('❌ Autorisation GPS refusée', 'error');
         setTimeout(() => this.showConfig(), 3000);
         break;
       case error.POSITION_UNAVAILABLE:
         message = 'Position GPS indisponible';
-        detail = 'Impossible de déterminer votre position';
         this.showToast('❌ GPS indisponible', 'error');
         setTimeout(() => this.showConfig(), 3000);
         break;
       case error.TIMEOUT:
         state.gpsRetries++;
-        
         if (state.gpsRetries > 3) {
-          message = 'GPS non disponible';
-          detail = 'Impossible de capter le signal GPS';
           this.showToast('❌ Signal GPS trop faible', 'error');
-          document.getElementById('loaderText').textContent = message;
-          document.getElementById('loaderDetail').textContent = detail;
           setTimeout(() => this.showConfig(), 3000);
           return;
         }
-        
         message = `GPS ne répond pas (${state.gpsRetries}/3)`;
-        detail = 'Nouvelle tentative dans 3 secondes...';
         this.showToast(`⏱️ Tentative ${state.gpsRetries}/3...`, 'warning');
-        document.getElementById('loaderText').textContent = message;
-        document.getElementById('loaderDetail').textContent = detail;
-        
-        setTimeout(() => {
-          console.log(`🔄 Nouvelle tentative GPS (${state.gpsRetries}/3)...`);
-          this.startGPSTracking();
-        }, 3000);
+        setTimeout(() => this.startGPSTracking(), 3000);
         break;
       default:
         this.showToast('❌ Erreur GPS', 'error');
         setTimeout(() => this.showConfig(), 3000);
     }
     
-    if (error.code !== error.TIMEOUT) {
-      document.getElementById('loaderText').textContent = message;
-      document.getElementById('loaderDetail').textContent = detail;
-    }
+    document.getElementById('loaderText').textContent = message;
+    document.getElementById('loaderDetail').textContent = detail;
   },
 
   stopGPSTracking() {
@@ -366,7 +470,8 @@ const app = {
     console.log('🎯 Précision:', accuracy.toFixed(0) + 'm');
     
     document.getElementById('gpsStatus').textContent = 'GPS actif';
-    document.getElementById('loaderDetail').textContent = `Précision: ${accuracy.toFixed(0)}m`;
+    
+    voiceSystem.speak('GPS activé, génération du parcours');
 
     this.initMap3D();
     this.generateRoute();
@@ -392,7 +497,42 @@ const app = {
     }
 
     if (speed !== null && speed >= 0) {
-      state.currentSpeed = Math.round(speed * 3.6);
+      const newSpeed = Math.round(speed * 3.6);
+      
+      // 📊 Stats: Détecter freinage brusque
+      if (state.stats.lastSpeed > 0 && newSpeed < state.stats.lastSpeed - 15) {
+        state.stats.harshBrakings++;
+        console.log('⚠️ Freinage brusque détecté');
+        voiceSystem.speak('Attention au freinage', 'high');
+      }
+      
+      state.currentSpeed = newSpeed;
+      state.stats.lastSpeed = newSpeed;
+      
+      // 📊 Stats moyennes
+      state.stats.speedSum += newSpeed;
+      state.stats.speedCount++;
+      state.stats.avgSpeed = Math.round(state.stats.speedSum / state.stats.speedCount);
+      
+      if (newSpeed > state.stats.maxSpeed) {
+        state.stats.maxSpeed = newSpeed;
+      }
+      
+      // ⚠️ Dépassement vitesse
+      if (newSpeed > state.currentSpeedLimit) {
+        const excess = newSpeed - state.currentSpeedLimit;
+        state.stats.speedViolations.push({
+          time: Date.now(),
+          speed: newSpeed,
+          limit: state.currentSpeedLimit,
+          excess: excess
+        });
+        
+        if (excess >= 10 && (!this.lastSpeedWarning || Date.now() - this.lastSpeedWarning > 10000)) {
+          voiceSystem.speak(`Attention, vous dépassez de ${excess} kilomètres heure`, 'high');
+          this.lastSpeedWarning = Date.now();
+        }
+      }
     }
 
     state.lastPosition = state.currentPosition;
@@ -405,7 +545,37 @@ const app = {
       this.updateCamera3D();
       this.updateUserMarker();
       this.updateVisibleRoute();
-      this.getSpeedLimit(latitude, longitude);
+      this.checkProximityAlerts();
+      
+      if (!this.lastSpeedLimitCheck || Date.now() - this.lastSpeedLimitCheck > 10000) {
+        this.getSpeedLimit(latitude, longitude);
+        this.lastSpeedLimitCheck = Date.now();
+      }
+    }
+  },
+
+  // ⚠️ Alertes de proximité
+  checkProximityAlerts() {
+    if (!state.instructions.length || state.currentInstructionIndex >= state.instructions.length) return;
+    
+    const instruction = state.instructions[state.currentInstructionIndex];
+    if (!instruction || !instruction.location) return;
+    
+    const from = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+    const to = turf.point(instruction.location);
+    const distanceM = turf.distance(from, to, { units: 'meters' });
+    
+    // Annonce vocale des directions
+    if (distanceM < 200 && distanceM > 150) {
+      if (!this.lastVoiceInstruction || this.lastVoiceInstruction !== state.currentInstructionIndex) {
+        voiceSystem.speak(`Dans ${Math.round(distanceM)} mètres, ${instruction.text}`);
+        this.lastVoiceInstruction = state.currentInstructionIndex;
+      }
+    } else if (distanceM < 50) {
+      if (this.lastVoiceInstruction === state.currentInstructionIndex) {
+        voiceSystem.speak(instruction.text, 'high');
+        this.lastVoiceInstruction = null;
+      }
     }
   },
 
@@ -423,11 +593,9 @@ const app = {
         if (!this.lastRecalculation || Date.now() - this.lastRecalculation > 10000) {
           console.log('🔄 Déviation détectée:', distanceFromRoute.toFixed(0) + 'm');
           this.showToast('🔄 Recalcul de l\'itinéraire...', 'warning');
+          voiceSystem.speak('Recalcul de l\'itinéraire');
           this.lastRecalculation = Date.now();
-          
-          setTimeout(() => {
-            this.recalculateRoute();
-          }, 1000);
+          setTimeout(() => this.recalculateRoute(), 1000);
         }
       }
     } catch (error) {
@@ -437,8 +605,6 @@ const app = {
 
   async recalculateRoute() {
     if (!state.currentPosition || state.selectedZones.length === 0) return;
-    
-    console.log('🔄 Recalcul de l\'itinéraire depuis la position actuelle...');
     
     const waypoints = [state.currentPosition];
     
@@ -452,13 +618,9 @@ const app = {
       }
     });
     
-    if (state.startPosition) {
-      waypoints.push(state.startPosition);
-    }
+    if (state.startPosition) waypoints.push(state.startPosition);
     
     const coordinates = waypoints.map(wp => `${wp.lng},${wp.lat}`).join(';');
-    
-    // ✅ URL avec paramètres FR et métriques
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&steps=true&language=fr&voice_units=metric&access_token=${mapboxgl.accessToken}`;
     
     try {
@@ -467,7 +629,6 @@ const app = {
       
       if (data.routes && data.routes.length > 0) {
         const route = data.routes[0];
-        
         state.route = route;
         state.routeGeometry = route.geometry;
         state.totalDistance = route.distance / 1000;
@@ -478,7 +639,6 @@ const app = {
           leg.steps.forEach(step => {
             const instruction = translateIfNeeded(step.maneuver.instruction);
             const streetName = step.name || step.ref || '';
-            
             state.instructions.push({
               text: instruction,
               street: streetName,
@@ -490,25 +650,24 @@ const app = {
         });
         
         state.currentInstructionIndex = 0;
-        
         this.updateVisibleRoute();
         this.updateNavigation();
-        
-        console.log('✅ Itinéraire recalculé avec', state.instructions.length, 'instructions FR');
         this.showToast('✅ Nouvel itinéraire calculé', 'success');
       }
     } catch (error) {
-      console.error('❌ Erreur recalcul itinéraire:', error);
-      this.showToast('⚠️ Erreur recalcul', 'error');
+      console.error('❌ Erreur recalcul:', error);
     }
   },
 
   // ========== CARTE MAPBOX ==========
   initMap3D() {
     console.log('🗺️ Initialisation carte...');
+    
+    const mapStyle = state.isDarkMode ? CONFIG.MAP_STYLES.night : CONFIG.MAP_STYLES.day;
+    
     state.map = new mapboxgl.Map({
       container: 'map',
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: mapStyle,
       center: [state.startPosition.lng, state.startPosition.lat],
       zoom: CONFIG.CAMERA.BASE_ZOOM,
       pitch: CONFIG.CAMERA.PREVIEW_PITCH,
@@ -529,12 +688,8 @@ const app = {
         minzoom: 15,
         paint: {
           'fill-extrusion-color': '#aaa',
-          'fill-extrusion-height': [
-            'interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']
-          ],
-          'fill-extrusion-base': [
-            'interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']
-          ],
+          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
+          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
           'fill-extrusion-opacity': 0.6
         }
       });
@@ -544,9 +699,7 @@ const app = {
   updateUserMarker() {
     if (!state.map || !state.currentPosition || !state.navigationStarted) return;
 
-    if (state.userMarker) {
-      state.userMarker.remove();
-    }
+    if (state.userMarker) state.userMarker.remove();
 
     let markerRotation = 0;
     
@@ -601,12 +754,10 @@ const app = {
       Math.min(CONFIG.CAMERA.MAX_ZOOM, CONFIG.CAMERA.BASE_ZOOM - speedFactor)
     );
 
-    const pitch = CONFIG.CAMERA.PITCH;
-
     state.map.easeTo({
       center: targetCoords,
       bearing: targetBearing,
-      pitch: pitch,
+      pitch: CONFIG.CAMERA.PITCH,
       zoom: dynamicZoom,
       duration: 500,
       easing: (t) => t * (2 - t)
@@ -626,41 +777,53 @@ const app = {
       for (let i = 0; i < routeCoords.length; i++) {
         const routePoint = turf.point(routeCoords[i]);
         const distance = turf.distance(currentPoint, routePoint, { units: 'meters' });
-        
         if (distance < minDistance) {
           minDistance = distance;
           closestIndex = i;
         }
       }
       
+      const LOOK_AHEAD_DISTANCE = 300;
       let targetIndex = routeCoords.length - 1;
+      let accumulatedDistance = 0;
+      
+      for (let i = closestIndex; i < routeCoords.length - 1; i++) {
+        const point1 = turf.point(routeCoords[i]);
+        const point2 = turf.point(routeCoords[i + 1]);
+        const segmentDistance = turf.distance(point1, point2, { units: 'meters' });
+        accumulatedDistance += segmentDistance;
+        
+        if (accumulatedDistance >= LOOK_AHEAD_DISTANCE) {
+          targetIndex = i + 1;
+          break;
+        }
+      }
       
       if (state.instructions.length > 0 && state.currentInstructionIndex < state.instructions.length) {
         const nextInstruction = state.instructions[state.currentInstructionIndex];
         if (nextInstruction && nextInstruction.location) {
           const targetPoint = turf.point(nextInstruction.location);
-          
+          let instructionIndex = targetIndex;
           let minDistToTarget = Infinity;
+          
           for (let i = closestIndex; i < routeCoords.length; i++) {
             const routePoint = turf.point(routeCoords[i]);
             const distToTarget = turf.distance(targetPoint, routePoint, { units: 'meters' });
             
             if (distToTarget < minDistToTarget) {
               minDistToTarget = distToTarget;
-              targetIndex = i;
+              instructionIndex = i;
             }
             
-            if (distToTarget > minDistToTarget + 50) {
-              break;
-            }
+            if (distToTarget > minDistToTarget + 50) break;
           }
+          
+          targetIndex = Math.max(targetIndex, instructionIndex + 20);
         }
       }
       
-      const EXTRA_POINTS = 10;
-      targetIndex = Math.min(targetIndex + EXTRA_POINTS, routeCoords.length - 1);
-      
-      const forwardCoords = routeCoords.slice(closestIndex + 1, targetIndex + 1);
+      targetIndex = Math.min(targetIndex, routeCoords.length - 1);
+      const forwardCoords = routeCoords.slice(closestIndex, targetIndex + 1);
       
       if (forwardCoords.length > 0) {
         const visibleCoords = [
@@ -671,25 +834,19 @@ const app = {
         if (visibleCoords.length >= 2) {
           const newGeometry = {
             type: 'Feature',
-            geometry: {
-              type: 'LineString',
-              coordinates: visibleCoords
-            },
+            geometry: { type: 'LineString', coordinates: visibleCoords },
             properties: {}
           };
           
           const source = state.map.getSource('route');
-          if (source) {
-            source.setData(newGeometry);
-          }
+          if (source) source.setData(newGeometry);
           
           if (!this.lastRouteUpdateLog || Date.now() - this.lastRouteUpdateLog > 5000) {
-            console.log(`✂️ Ligne: ${forwardCoords.length} points jusqu'à prochaine instruction`);
+            const percentComplete = Math.round((closestIndex / routeCoords.length) * 100);
+            console.log(`✂️ Route: ${forwardCoords.length} pts | ${closestIndex}/${routeCoords.length} (${percentComplete}%)`);
             this.lastRouteUpdateLog = Date.now();
           }
         }
-      } else {
-        console.log('🏁 Fin du parcours');
       }
     } catch (error) {
       console.error('❌ Erreur updateVisibleRoute:', error);
@@ -712,11 +869,9 @@ const app = {
           duration: 1200
         });
       }
-      this.showToast('Vue recentrée sur le parcours', 'success');
+      this.showToast('Vue recentrée', 'success');
       return;
     }
-    
-    console.log('🎯 Recentrage vue 2D navigation');
     
     let targetBearing = state.heading || 0;
     
@@ -748,7 +903,6 @@ const app = {
   // ========== ROUTING ==========
   async generateRoute() {
     document.getElementById('loaderText').textContent = 'Calcul du parcours...';
-    document.getElementById('loaderDetail').textContent = 'Génération itinéraire';
 
     const waypoints = [state.startPosition];
 
@@ -765,8 +919,6 @@ const app = {
     waypoints.push(state.startPosition);
 
     const coordinates = waypoints.map(wp => `${wp.lng},${wp.lat}`).join(';');
-    
-    // ✅ URL avec paramètres FR et métriques
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&steps=true&language=fr&voice_units=metric&access_token=${mapboxgl.accessToken}`;
 
     try {
@@ -775,7 +927,6 @@ const app = {
 
       if (data.routes && data.routes.length > 0) {
         const route = data.routes[0];
-
         state.route = route;
         state.routeGeometry = route.geometry;
         state.totalDistance = route.distance / 1000;
@@ -784,10 +935,8 @@ const app = {
 
         route.legs.forEach(leg => {
           leg.steps.forEach(step => {
-            // ✅ Traduction si nécessaire
             const instruction = translateIfNeeded(step.maneuver.instruction);
             const streetName = step.name || step.ref || '';
-            
             state.instructions.push({
               text: instruction,
               street: streetName,
@@ -798,18 +947,17 @@ const app = {
           });
         });
 
-        console.log('✅ Route calculée:', route.geometry.coordinates.length, 'points');
-        console.log('✅ Instructions FR:', state.instructions.length);
+        console.log('✅ Route:', route.geometry.coordinates.length, 'points');
 
         state.isPreviewMode = true;
         this.drawRoute(route.geometry);
-
         document.getElementById('loader').classList.remove('active');
         this.showPreviewControls();
         
+        voiceSystem.speak(`Parcours calculé, ${state.totalDistance.toFixed(1)} kilomètres`);
         this.showToast(`✅ Parcours: ${state.totalDistance.toFixed(1)} km`, 'success');
       } else {
-        throw new Error('Aucune route trouvée.');
+        throw new Error('Aucune route trouvée');
       }
     } catch (error) {
       console.error('❌ Erreur routing:', error);
@@ -836,7 +984,7 @@ const app = {
   },
 
   startNavigation() {
-    console.log('🚀 Démarrage de la navigation');
+    console.log('🚀 Démarrage navigation');
     
     const btn = document.getElementById('startNavigationBtn');
     if (btn) btn.remove();
@@ -849,9 +997,20 @@ const app = {
     state.navigationStarted = true;
     state.startTime = Date.now();
     
+    // Réinitialiser stats
+    state.stats = {
+      maxSpeed: 0,
+      avgSpeed: 0,
+      speedSum: 0,
+      speedCount: 0,
+      speedViolations: [],
+      harshBrakings: 0,
+      lastSpeed: 0,
+      score: 100
+    };
+    
     if (state.map && state.map.getLayer('3d-buildings')) {
       state.map.setLayoutProperty('3d-buildings', 'visibility', 'none');
-      console.log('🏢 Bâtiments 3D masqués');
     }
     
     this.updateNavigation();
@@ -859,20 +1018,16 @@ const app = {
     
     if (state.currentPosition && state.routeGeometry) {
       this.updateVisibleRoute();
-      console.log('✂️ Ligne coupée : seulement la partie devant est visible');
     }
     
-    setTimeout(() => {
-      this.transitionToFirstPersonView();
-    }, 100);
+    setTimeout(() => this.transitionToFirstPersonView(), 100);
     
-    this.showToast('🗺️ Navigation 2D démarrée !', 'success');
+    voiceSystem.speak('Navigation démarrée');
+    this.showToast('🗺️ Navigation démarrée !', 'success');
   },
 
   transitionToFirstPersonView() {
     if (!state.map || !state.currentPosition) return;
-    
-    console.log('🎥 Transition vers vue 2D navigation (type Waze)');
     
     let targetBearing = state.heading || 0;
     
@@ -898,90 +1053,44 @@ const app = {
       essential: true
     });
     
-    console.log('✅ Vue 2D activée - pitch:', CONFIG.CAMERA.PITCH);
-    
-    setTimeout(() => {
-      this.updateUserMarker();
-    }, 500);
+    setTimeout(() => this.updateUserMarker(), 500);
   },
 
   drawRoute(geometry) {
     if (!state.map) return;
 
-    console.log('🎨 Dessin de la route...');
+    const geojson = { type: 'Feature', geometry: geometry, properties: {} };
 
-    const geojson = {
-      type: 'Feature',
-      geometry: geometry,
-      properties: {}
-    };
+    if (state.map.getLayer('route-center')) state.map.removeLayer('route-center');
+    if (state.map.getLayer('route')) state.map.removeLayer('route');
+    if (state.map.getLayer('route-outline')) state.map.removeLayer('route-outline');
+    if (state.map.getSource('route')) state.map.removeSource('route');
 
-    if (state.map.getLayer('route-center')) {
-      state.map.removeLayer('route-center');
-    }
-    if (state.map.getLayer('route')) {
-      state.map.removeLayer('route');
-    }
-    if (state.map.getLayer('route-outline')) {
-      state.map.removeLayer('route-outline');
-    }
-    if (state.map.getSource('route')) {
-      state.map.removeSource('route');
-    }
-
-    state.map.addSource('route', {
-      type: 'geojson',
-      data: geojson,
-      lineMetrics: true
-    });
+    state.map.addSource('route', { type: 'geojson', data: geojson, lineMetrics: true });
 
     state.map.addLayer({
       id: 'route-outline',
       type: 'line',
       source: 'route',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': '#0c2461',
-        'line-width': 16,
-        'line-opacity': 0.5,
-        'line-blur': 4
-      }
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#0c2461', 'line-width': 16, 'line-opacity': 0.5, 'line-blur': 4 }
     });
 
     state.map.addLayer({
       id: 'route',
       type: 'line',
       source: 'route',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': '#2563eb',
-        'line-width': 12,
-        'line-opacity': 0.95
-      }
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#2563eb', 'line-width': 12, 'line-opacity': 0.95 }
     });
 
     state.map.addLayer({
       id: 'route-center',
       type: 'line',
       source: 'route',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': '#60a5fa',
-        'line-width': 6,
-        'line-opacity': 1
-      }
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#60a5fa', 'line-width': 6, 'line-opacity': 1 }
     });
-
-    console.log('✅ Route dessinée sur la carte');
 
     if (state.isPreviewMode) {
       const coordinates = geometry.coordinates;
@@ -994,8 +1103,6 @@ const app = {
         pitch: CONFIG.CAMERA.PREVIEW_PITCH,
         duration: 2000
       });
-      
-      this.showToast('🗺️ Aperçu du parcours - Appuyez sur "Commencer"', 'success');
     }
   },
 
@@ -1022,14 +1129,12 @@ const app = {
       this.updateNextInstructions();
     }
 
-    // ✅ Affichage avec formatage FR
     document.getElementById('navDistance').textContent = formatDistance(distanceM);
 
     const speed = state.currentSpeed > 0 ? state.currentSpeed : 40;
     const timeMin = (distanceM / 1000) / speed * 60;
     document.getElementById('navTime').textContent = formatTime(timeMin);
 
-    // ✅ Affichage instruction + rue
     const streetInfo = instruction.street ? ` - ${instruction.street}` : '';
     document.getElementById('navStreet').textContent = instruction.text + streetInfo;
     
@@ -1040,10 +1145,9 @@ const app = {
     const icon = document.getElementById('navIcon');
     const t = text.toLowerCase();
     
-    // ✅ Détection basée sur mots français
-    if (t.includes('gauche') || t.includes('à gauche')) {
+    if (t.includes('gauche')) {
       icon.className = 'fas fa-arrow-left';
-    } else if (t.includes('droite') || t.includes('à droite')) {
+    } else if (t.includes('droite')) {
       icon.className = 'fas fa-arrow-right';
     } else if (t.includes('demi-tour')) {
       icon.className = 'fas fa-undo';
@@ -1087,7 +1191,7 @@ const app = {
     document.getElementById('nextInstructions').classList.toggle('active');
   },
 
-  // ========== LIMITES DE VITESSE ==========
+  // ========== LIMITES VITESSE ==========
   async getSpeedLimit(lat, lng) {
     if (this.speedLimitErrors > 3) return;
     
@@ -1120,10 +1224,6 @@ const app = {
     } catch (error) {
       if (!this.speedLimitErrors) this.speedLimitErrors = 0;
       this.speedLimitErrors++;
-      
-      if (this.speedLimitErrors === 3) {
-        console.warn('⚠️ API vitesse désactivée (trop d\'erreurs)');
-      }
     }
     
     document.getElementById('speedLimit').textContent = CONFIG.DEFAULT_SPEED_LIMIT;
@@ -1134,6 +1234,7 @@ const app = {
     if (!state.navigationStarted) return;
     
     document.getElementById('speedValue').textContent = state.currentSpeed;
+    
     if (state.startTime && state.totalDuration > 0) {
       const elapsed = (Date.now() - state.startTime) / 1000 / 60;
       const progress = Math.min(100, (elapsed / state.totalDuration) * 100);
@@ -1141,6 +1242,42 @@ const app = {
       document.getElementById('statDistance').textContent = `${state.distanceTraveled.toFixed(1)} km`;
       document.getElementById('statTime').textContent = `${Math.round(elapsed)} min`;
       document.getElementById('statQuestions').textContent = `${state.correctAnswers}/${state.totalQuestions}`;
+      
+      // 📊 Stats avancées
+      const statsAdvEl = document.getElementById('statsAdvanced');
+      if (statsAdvEl) {
+        statsAdvEl.innerHTML = `
+          <div class="stat-advanced">
+            <i class="fas fa-tachometer-alt"></i>
+            <div>
+              <strong>${state.stats.avgSpeed} km/h</strong>
+              <span>Vitesse moyenne</span>
+            </div>
+          </div>
+          <div class="stat-advanced">
+            <i class="fas fa-rocket"></i>
+            <div>
+              <strong>${state.stats.maxSpeed} km/h</strong>
+              <span>Vitesse max</span>
+            </div>
+          </div>
+          <div class="stat-advanced">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+              <strong>${state.stats.speedViolations.length}</strong>
+              <span>Dépassements</span>
+            </div>
+          </div>
+          <div class="stat-advanced">
+            <i class="fas fa-hand-paper"></i>
+            <div>
+              <strong>${state.stats.harshBrakings}</strong>
+              <span>Freinages brusques</span>
+            </div>
+          </div>
+        `;
+      }
+      
       document.getElementById('progressFill').style.width = `${progress}%`;
       document.getElementById('progressText').textContent = `Progression: ${Math.round(progress)}%`;
 
@@ -1150,6 +1287,130 @@ const app = {
 
   toggleStats() {
     document.getElementById('statsPanel').classList.toggle('active');
+  },
+  
+  // 🌓 Toggle mode nuit
+  toggleDarkMode() {
+    if (!state.map) return;
+    state.isDarkMode = themeManager.toggle(state.map);
+    
+    // Redessiner la route après changement de style
+    state.map.once('styledata', () => {
+      if (state.routeGeometry) {
+        this.drawRoute(state.routeGeometry);
+      }
+    });
+    
+    this.showToast(`Mode ${state.isDarkMode ? 'Nuit' : 'Jour'} activé`, 'success');
+  },
+  
+  // 📢 Toggle voix
+  toggleVoice() {
+    const enabled = voiceSystem.toggle();
+    this.showToast(`Voix ${enabled ? 'activée' : 'désactivée'}`, 'success');
+  },
+  
+  // 👨‍🏫 Accompagnateur
+  toggleSupervisor() {
+    const panel = document.getElementById('supervisorPanel');
+    if (!panel) {
+      this.createSupervisorPanel();
+    } else {
+      panel.classList.toggle('active');
+    }
+  },
+  
+  createSupervisorPanel() {
+    const panel = document.createElement('div');
+    panel.id = 'supervisorPanel';
+    panel.className = 'supervisor-panel';
+    panel.innerHTML = `
+      <div class="supervisor-header">
+        <h3>👨‍🏫 Notes Accompagnateur</h3>
+        <button class="btn-close" onclick="app.toggleSupervisor()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="supervisor-content">
+        <div class="supervisor-section">
+          <h4>✅ Points positifs</h4>
+          <textarea id="supervisorPositive" placeholder="Bonne anticipation, respect des distances..."></textarea>
+          <button class="btn-add-note" onclick="app.addSupervisorNote('positive')">
+            <i class="fas fa-plus"></i> Ajouter
+          </button>
+          <div id="positiveNotes" class="notes-list"></div>
+        </div>
+        <div class="supervisor-section">
+          <h4>⚠️ À améliorer</h4>
+          <textarea id="supervisorNegative" placeholder="Vitesse excessive, oubli clignotant..."></textarea>
+          <button class="btn-add-note negative" onclick="app.addSupervisorNote('negative')">
+            <i class="fas fa-plus"></i> Ajouter
+          </button>
+          <div id="negativeNotes" class="notes-list"></div>
+        </div>
+        <div class="supervisor-section">
+          <h4>📝 Commentaire général</h4>
+          <textarea id="supervisorGeneral" rows="3" placeholder="Impression générale sur la conduite..."></textarea>
+        </div>
+      </div>
+    `;
+    document.getElementById('drivingScreen').appendChild(panel);
+    panel.classList.add('active');
+  },
+  
+  addSupervisorNote(type) {
+    const textareaId = type === 'positive' ? 'supervisorPositive' : 'supervisorNegative';
+    const textarea = document.getElementById(textareaId);
+    const text = textarea.value.trim();
+    
+    if (!text) return;
+    
+    const timestamp = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    
+    if (type === 'positive') {
+      state.supervisorNotes.positive.push({ time: timestamp, text });
+    } else {
+      state.supervisorNotes.negative.push({ time: timestamp, text });
+    }
+    
+    textarea.value = '';
+    this.renderSupervisorNotes();
+  },
+  
+  renderSupervisorNotes() {
+    const positiveList = document.getElementById('positiveNotes');
+    const negativeList = document.getElementById('negativeNotes');
+    
+    if (positiveList) {
+      positiveList.innerHTML = state.supervisorNotes.positive.map((note, i) => `
+        <div class="note-item positive">
+          <span class="note-time">${note.time}</span>
+          <span class="note-text">${note.text}</span>
+          <button class="btn-remove-note" onclick="app.removeSupervisorNote('positive', ${i})">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+    
+    if (negativeList) {
+      negativeList.innerHTML = state.supervisorNotes.negative.map((note, i) => `
+        <div class="note-item negative">
+          <span class="note-time">${note.time}</span>
+          <span class="note-text">${note.text}</span>
+          <button class="btn-remove-note" onclick="app.removeSupervisorNote('negative', ${i})">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+  },
+  
+  removeSupervisorNote(type, index) {
+    if (type === 'positive') {
+      state.supervisorNotes.positive.splice(index, 1);
+    } else {
+      state.supervisorNotes.negative.splice(index, 1);
+    }
+    this.renderSupervisorNotes();
   },
 
   // ========== QUESTIONS ==========
@@ -1222,7 +1483,22 @@ const app = {
       heading: 0,
       isPreviewMode: true,
       navigationStarted: false,
-      gpsRetries: 0
+      gpsRetries: 0,
+      stats: {
+        maxSpeed: 0,
+        avgSpeed: 0,
+        speedSum: 0,
+        speedCount: 0,
+        speedViolations: [],
+        harshBrakings: 0,
+        lastSpeed: 0,
+        score: 100
+      },
+      supervisorNotes: {
+        positive: [],
+        negative: [],
+        general: ''
+      }
     });
 
     this.showDriving();
@@ -1231,15 +1507,106 @@ const app = {
   },
 
   stopDriving() {
-    if (confirm('⚠ Arrêter le parcours ?')) this.finishDriving();
+    if (confirm('⚠️ Arrêter le parcours ?')) this.finishDriving();
   },
 
   finishDriving() {
     this.stopGPSTracking();
+    voiceSystem.speak('Parcours terminé');
+    
     const totalTime = state.startTime ? Math.round((Date.now() - state.startTime) / 1000 / 60) : 0;
+    
+    // Récupérer notes accompagnateur
+    const generalNote = document.getElementById('supervisorGeneral');
+    if (generalNote) {
+      state.supervisorNotes.general = generalNote.value;
+    }
+    
+    // Calculer score final
+    let score = 100;
+    score -= state.stats.speedViolations.length * 5;
+    score -= state.stats.harshBrakings * 3;
+    score = Math.max(0, score);
+    state.stats.score = score;
+    
+    // 📝 Sauvegarder dans historique
+    historyManager.save({
+      zones: state.selectedZones.map(zoneId => {
+        const zone = CONFIG.ZONES.find(z => z.id === zoneId);
+        return zone ? zone.name : zoneId;
+      }),
+      distance: state.distanceTraveled,
+      duration: totalTime,
+      avgSpeed: state.stats.avgSpeed,
+      maxSpeed: state.stats.maxSpeed,
+      speedViolations: state.stats.speedViolations.length,
+      harshBrakings: state.stats.harshBrakings,
+      score: score,
+      correctAnswers: state.correctAnswers,
+      totalQuestions: state.totalQuestions,
+      supervisorNotes: state.supervisorNotes
+    });
+    
     document.getElementById('finalDistance').textContent = `${state.distanceTraveled.toFixed(1)} km`;
     document.getElementById('finalTime').textContent = `${totalTime} min`;
     document.getElementById('finalQuestions').textContent = `${state.correctAnswers}/${state.totalQuestions}`;
+    
+    // Afficher stats avancées dans modal
+    const finalStatsEl = document.getElementById('finalStatsAdvanced');
+    if (finalStatsEl) {
+      finalStatsEl.innerHTML = `
+        <div class="final-stat-row">
+          <strong>Vitesse moyenne:</strong> <span>${state.stats.avgSpeed} km/h</span>
+        </div>
+        <div class="final-stat-row">
+          <strong>Vitesse max:</strong> <span>${state.stats.maxSpeed} km/h</span>
+        </div>
+        <div class="final-stat-row">
+          <strong>Dépassements vitesse:</strong> <span>${state.stats.speedViolations.length}</span>
+        </div>
+        <div class="final-stat-row">
+          <strong>Freinages brusques:</strong> <span>${state.stats.harshBrakings}</span>
+        </div>
+        <div class="final-stat-row score">
+          <strong>Score de conduite:</strong> <span class="score-value">${score}/100</span>
+        </div>
+      `;
+    }
+    
+    // Afficher notes accompagnateur
+    const supervisorReportEl = document.getElementById('supervisorReport');
+    if (supervisorReportEl) {
+      let reportHTML = '<h4>📋 Rapport Accompagnateur</h4>';
+      
+      if (state.supervisorNotes.positive.length > 0) {
+        reportHTML += '<div class="report-section positive"><h5>✅ Points positifs</h5><ul>';
+        state.supervisorNotes.positive.forEach(note => {
+          reportHTML += `<li><span class="note-time">${note.time}</span> ${note.text}</li>`;
+        });
+        reportHTML += '</ul></div>';
+      }
+      
+      if (state.supervisorNotes.negative.length > 0) {
+        reportHTML += '<div class="report-section negative"><h5>⚠️ À améliorer</h5><ul>';
+        state.supervisorNotes.negative.forEach(note => {
+          reportHTML += `<li><span class="note-time">${note.time}</span> ${note.text}</li>`;
+        });
+        reportHTML += '</ul></div>';
+      }
+      
+      if (state.supervisorNotes.general) {
+        reportHTML += `<div class="report-section"><h5>💬 Commentaire général</h5><p>${state.supervisorNotes.general}</p></div>`;
+      }
+      
+      if (state.supervisorNotes.positive.length === 0 && 
+          state.supervisorNotes.negative.length === 0 && 
+          !state.supervisorNotes.general) {
+        reportHTML += '<p class="no-notes">Aucune note d\'accompagnateur</p>';
+      }
+      
+      supervisorReportEl.innerHTML = reportHTML;
+    }
+    
     document.getElementById('finishModal').classList.add('active');
   },
 
@@ -1252,6 +1619,9 @@ const app = {
   cleanupMap() {
     const btn = document.getElementById('startNavigationBtn');
     if (btn) btn.remove();
+    
+    const supervisorPanel = document.getElementById('supervisorPanel');
+    if (supervisorPanel) supervisorPanel.remove();
     
     if (state.userMarker) {
       state.userMarker.remove();
@@ -1277,9 +1647,6 @@ const app = {
     }, 3000);
   }
 };
-
-
-
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
