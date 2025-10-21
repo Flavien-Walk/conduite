@@ -41,7 +41,7 @@ body {
 
 .screen.active {
     display: flex;
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 0.4s ease;
 }
 
 @keyframes fadeIn {
@@ -49,7 +49,7 @@ body {
     to { opacity: 1; }
 }
 
-/* HOME SCREEN */
+/* ==================== HOME SCREEN REDESIGN ==================== */
 #homeScreen {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     justify-content: center;
@@ -61,8 +61,15 @@ body {
 .home-bg {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.3), transparent),
-                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.3), transparent);
+    background: 
+        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1), transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.2), transparent 50%);
+    animation: bgFloat 15s ease-in-out infinite;
+}
+
+@keyframes bgFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-20px) scale(1.05); }
 }
 
 .home-content {
@@ -70,31 +77,49 @@ body {
     z-index: 1;
     text-align: center;
     padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    animation: slideUpFade 0.8s ease-out;
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .home-logo {
-    font-size: 5rem;
+    font-size: 5.5rem;
     margin-bottom: 1.5rem;
-    animation: pulse 2s infinite;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+    animation: floatLogo 3s ease-in-out infinite;
 }
 
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.08); }
+@keyframes floatLogo {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(2deg); }
 }
 
 .home-title {
     font-size: 3rem;
     font-weight: 800;
     color: white;
-    margin-bottom: 0.5rem;
-    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    margin-bottom: 0.75rem;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    letter-spacing: -0.02em;
 }
 
 .home-subtitle {
-    font-size: 1.2rem;
-    color: rgba(255, 255, 255, 0.9);
-    margin-bottom: 3rem;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 3.5rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
 }
 
 /* BUTTONS */
@@ -102,21 +127,50 @@ body {
     background: white;
     color: var(--primary);
     border: none;
-    padding: 1.25rem 3rem;
-    font-size: 1.2rem;
+    padding: 1.1rem 2.5rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    border-radius: 50px;
+    border-radius: 16px;
     cursor: pointer;
-    box-shadow: var(--shadow-lg);
-    transition: all 0.3s;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
     font-family: inherit;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.1);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-primary:active::before {
+    width: 300px;
+    height: 300px;
 }
 
 .btn-primary:active {
-    transform: scale(0.95);
+    transform: scale(0.96);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary i {
+    transition: transform 0.3s;
+}
+
+.btn-primary:active i {
+    transform: translateX(4px);
 }
 
 .btn-secondary {
@@ -352,6 +406,94 @@ body {
     transform: scale(0.98);
 }
 
+/* ==================== BOUTON NAVIGATION REDESIGN ==================== */
+.btn-start-navigation {
+    position: fixed;
+    bottom: 140px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 500;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 1.2rem 2.8rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 
+        0 8px 24px rgba(16, 185, 129, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    letter-spacing: 0.02em;
+}
+
+.btn-start-navigation::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-start-navigation:active::before {
+    width: 400px;
+    height: 400px;
+}
+
+.btn-start-navigation:active {
+    transform: translateX(-50%) scale(0.96);
+    box-shadow: 
+        0 4px 16px rgba(16, 185, 129, 0.4),
+        0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-start-navigation i {
+    font-size: 1.3rem;
+    transition: transform 0.3s;
+    position: relative;
+    z-index: 1;
+}
+
+.btn-start-navigation span {
+    position: relative;
+    z-index: 1;
+}
+
+.btn-start-navigation:active i {
+    transform: translateX(3px);
+}
+
+/* Animation douce au lieu du pulse agressif */
+@keyframes gentleGlow {
+    0%, 100% { 
+        box-shadow: 
+            0 8px 24px rgba(16, 185, 129, 0.3),
+            0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    50% { 
+        box-shadow: 
+            0 12px 32px rgba(16, 185, 129, 0.4),
+            0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+}
+
+.btn-start-navigation {
+    animation: gentleGlow 3s ease-in-out infinite;
+}
+
 /* DRIVING SCREEN */
 .driving-header {
     background: white;
@@ -445,6 +587,24 @@ body {
     font-size: 0.7rem;
     color: var(--text-muted);
     font-weight: 600;
+}
+
+.speed-limit {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    width: 36px;
+    height: 36px;
+    background: var(--danger);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* NAV CARD */
@@ -1001,13 +1161,88 @@ body {
     }
 }
 
-/* RESPONSIVE */
+/* RESPONSIVE MOBILE OPTIMIZATIONS */
 @media (max-width: 480px) {
+    .home-logo {
+        font-size: 4.5rem;
+    }
+    
+    .home-title {
+        font-size: 2.5rem;
+    }
+    
+    .home-subtitle {
+        font-size: 1rem;
+    }
+    
     .zones-grid {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     }
     
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .nav-distance {
+        font-size: 2rem;
+    }
+    
+    .nav-street {
+        font-size: 1rem;
+    }
+    
+    .btn-start-navigation {
+        bottom: 120px;
+        padding: 1.1rem 2.3rem;
+        font-size: 1.05rem;
+    }
+    
+    .speed-widget {
+        width: 85px;
+        height: 85px;
+    }
+    
+    .speed-value {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .home-content {
+        padding: 1.5rem;
+    }
+    
+    .btn-primary {
+        padding: 1rem 2rem;
+        font-size: 1rem;
+    }
+    
+    .nav-card {
+        padding: 1.2rem;
+    }
+    
+    .nav-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+}
+
+/* Safe area pour les notches iPhone */
+@supports (padding: max(0px)) {
+    .home-content {
+        padding-bottom: max(2rem, env(safe-area-inset-bottom));
+    }
+    
+    .btn-start-navigation {
+        bottom: max(140px, calc(140px + env(safe-area-inset-bottom)));
+    }
+    
+    .speed-widget {
+        bottom: max(30px, calc(30px + env(safe-area-inset-bottom)));
+    }
+    
+    .action-buttons {
+        bottom: max(30px, calc(30px + env(safe-area-inset-bottom)));
     }
 }
