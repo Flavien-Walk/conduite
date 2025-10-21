@@ -43,18 +43,95 @@ const CONFIG = {
   
   // Configuration caméra
   CAMERA: {
-    // Mode navigation (vue 2D de dessus - type Waze)
     MIN_ZOOM: 17.5,
     MAX_ZOOM: 19,
     BASE_ZOOM: 18,
-    PITCH: 0, // Vue 2D plate (pas 3D)
+    PITCH: 0,
     SPEED_ZOOM_FACTOR: 0.005,
-    LOOK_AHEAD_DISTANCE: 50, // Distance réduite en 2D
-    // Mode preview
+    LOOK_AHEAD_DISTANCE: 50,
     PREVIEW_ZOOM: 15,
     PREVIEW_PITCH: 60
   }
 };
+
+/* ==================== TRADUCTION FALLBACK ==================== */
+
+const TRANSLATION_DICT = {
+  // Directions
+  'left': 'gauche',
+  'right': 'droite',
+  'straight': 'tout droit',
+  'slight': 'légèrement',
+  'sharp': 'fortement',
+  'turn': 'tourner',
+  'roundabout': 'rond-point',
+  'rotary': 'rond-point',
+  'u-turn': 'demi-tour',
+  'merge': 's\'insérer',
+  'ramp': 'bretelle',
+  'fork': 'bifurcation',
+  'continue': 'continuer',
+  'proceed': 'continuer',
+  'head': 'se diriger',
+  'take': 'prendre',
+  'exit': 'sortie',
+  'arrive': 'arriver',
+  'destination': 'destination',
+  'the': 'la',
+  'on': 'sur',
+  'onto': 'sur',
+  'toward': 'vers',
+  'towards': 'vers',
+  'at': 'à',
+  'in': 'dans',
+  'meters': 'mètres',
+  'kilometers': 'kilomètres',
+  'you have arrived': 'vous êtes arrivé',
+  'your destination': 'votre destination'
+};
+
+function detectLanguage(text) {
+  const frenchWords = ['gauche', 'droite', 'tout', 'droit', 'tourner', 'rond-point', 'demi-tour', 'continuer', 'arriver', 'vers', 'sur', 'dans'];
+  const lowerText = text.toLowerCase();
+  return frenchWords.some(word => lowerText.includes(word)) ? 'fr' : 'en';
+}
+
+function translateIfNeeded(instruction) {
+  if (!instruction) return instruction;
+  
+  // Vérifier si déjà en français
+  if (detectLanguage(instruction) === 'fr') {
+    return instruction;
+  }
+  
+  // Appliquer la traduction mot à mot
+  let translated = instruction;
+  
+  // Remplacer les expressions complètes d'abord
+  Object.keys(TRANSLATION_DICT).forEach(en => {
+    const fr = TRANSLATION_DICT[en];
+    const regex = new RegExp('\\b' + en + '\\b', 'gi');
+    translated = translated.replace(regex, fr);
+  });
+  
+  return translated;
+}
+
+function formatDistance(meters) {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  } else {
+    return `${(meters / 1000).toFixed(1)} km`;
+  }
+}
+
+function formatTime(minutes) {
+  if (minutes < 1) {
+    return `${Math.round(minutes * 60)} sec`;
+  } else {
+    return `${Math.round(minutes)} min`;
+  }
+}
 
 /* ==================== ÉTAT ==================== */
 
@@ -97,7 +174,7 @@ const app = {
   speedLimitErrors: 0,
   
   init() {
-    console.log('🚗 Drive Lyon - Navigation 2D');
+    console.log('🚗 Drive Lyon - Navigation 2D FR');
     
     if (typeof THREE !== 'undefined') {
       state.use3D = true;
@@ -183,7 +260,7 @@ const app = {
         maximumAge: 5000
       };
       
-      console.log('🔍 Recherche signal GPS...');
+      console.log('📡 Recherche signal GPS...');
       
       navigator.geolocation.getCurrentPosition(
         (position) => this.onGPSSuccess(position),
@@ -286,7 +363,7 @@ const app = {
     state.gpsRetries = 0;
 
     console.log('✅ GPS Position acquise:', latitude.toFixed(6), longitude.toFixed(6));
-    console.log('📍 Précision:', accuracy.toFixed(0) + 'm');
+    console.log('🎯 Précision:', accuracy.toFixed(0) + 'm');
     
     document.getElementById('gpsStatus').textContent = 'GPS actif';
     document.getElementById('loaderDetail').textContent = `Précision: ${accuracy.toFixed(0)}m`;
@@ -380,7 +457,9 @@ const app = {
     }
     
     const coordinates = waypoints.map(wp => `${wp.lng},${wp.lat}`).join(';');
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&steps=true&access_token=${mapboxgl.accessToken}`;
+    
+    // ✅ URL avec paramètres FR et métriques
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&steps=true&language=fr&voice_units=metric&access_token=${mapboxgl.accessToken}`;
     
     try {
       const response = await fetch(url);
@@ -397,8 +476,12 @@ const app = {
         
         route.legs.forEach(leg => {
           leg.steps.forEach(step => {
+            const instruction = translateIfNeeded(step.maneuver.instruction);
+            const streetName = step.name || step.ref || '';
+            
             state.instructions.push({
-              text: step.maneuver.instruction,
+              text: instruction,
+              street: streetName,
               distance: step.distance,
               duration: step.duration,
               location: step.maneuver.location
@@ -411,7 +494,7 @@ const app = {
         this.updateVisibleRoute();
         this.updateNavigation();
         
-        console.log('✅ Itinéraire recalculé');
+        console.log('✅ Itinéraire recalculé avec', state.instructions.length, 'instructions FR');
         this.showToast('✅ Nouvel itinéraire calculé', 'success');
       }
     } catch (error) {
@@ -537,7 +620,6 @@ const app = {
       const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
       const routeCoords = state.routeGeometry.coordinates;
       
-      // Trouver le point de la route le plus proche
       let closestIndex = 0;
       let minDistance = Infinity;
       
@@ -551,7 +633,6 @@ const app = {
         }
       }
       
-      // SOLUTION : Afficher uniquement jusqu'à la prochaine instruction
       let targetIndex = routeCoords.length - 1;
       
       if (state.instructions.length > 0 && state.currentInstructionIndex < state.instructions.length) {
@@ -576,7 +657,6 @@ const app = {
         }
       }
       
-      // Ajouter quelques points après la prochaine instruction
       const EXTRA_POINTS = 10;
       targetIndex = Math.min(targetIndex + EXTRA_POINTS, routeCoords.length - 1);
       
@@ -685,7 +765,9 @@ const app = {
     waypoints.push(state.startPosition);
 
     const coordinates = waypoints.map(wp => `${wp.lng},${wp.lat}`).join(';');
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&steps=true&access_token=${mapboxgl.accessToken}`;
+    
+    // ✅ URL avec paramètres FR et métriques
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&steps=true&language=fr&voice_units=metric&access_token=${mapboxgl.accessToken}`;
 
     try {
       const response = await fetch(url);
@@ -702,8 +784,13 @@ const app = {
 
         route.legs.forEach(leg => {
           leg.steps.forEach(step => {
+            // ✅ Traduction si nécessaire
+            const instruction = translateIfNeeded(step.maneuver.instruction);
+            const streetName = step.name || step.ref || '';
+            
             state.instructions.push({
-              text: step.maneuver.instruction,
+              text: instruction,
+              street: streetName,
               distance: step.distance,
               duration: step.duration,
               location: step.maneuver.location
@@ -712,6 +799,7 @@ const app = {
         });
 
         console.log('✅ Route calculée:', route.geometry.coordinates.length, 'points');
+        console.log('✅ Instructions FR:', state.instructions.length);
 
         state.isPreviewMode = true;
         this.drawRoute(route.geometry);
@@ -934,30 +1022,41 @@ const app = {
       this.updateNextInstructions();
     }
 
-    document.getElementById('navDistance').textContent =
-      distanceM > 1000 ? `${(distanceM / 1000).toFixed(1)} km` : `${Math.round(distanceM)} m`;
+    // ✅ Affichage avec formatage FR
+    document.getElementById('navDistance').textContent = formatDistance(distanceM);
 
     const speed = state.currentSpeed > 0 ? state.currentSpeed : 40;
     const timeMin = (distanceM / 1000) / speed * 60;
-    document.getElementById('navTime').textContent = timeMin < 1
-      ? `${Math.round(timeMin * 60)} sec`
-      : `${Math.round(timeMin)} min`;
+    document.getElementById('navTime').textContent = formatTime(timeMin);
 
-    document.getElementById('navStreet').textContent = instruction.text;
+    // ✅ Affichage instruction + rue
+    const streetInfo = instruction.street ? ` - ${instruction.street}` : '';
+    document.getElementById('navStreet').textContent = instruction.text + streetInfo;
+    
     this.updateDirectionIcon(instruction.text);
   },
 
   updateDirectionIcon(text) {
     const icon = document.getElementById('navIcon');
     const t = text.toLowerCase();
-    if (t.includes('gauche') || t.includes('left')) icon.className = 'fas fa-arrow-left';
-    else if (t.includes('droite') || t.includes('right')) icon.className = 'fas fa-arrow-right';
-    else if (t.includes('demi-tour') || t.includes('u-turn')) icon.className = 'fas fa-undo';
-    else if (t.includes('rond-point') || t.includes('roundabout')) icon.className = 'fas fa-sync';
-    else if (t.includes('arrivée') || t.includes('arrived')) {
+    
+    // ✅ Détection basée sur mots français
+    if (t.includes('gauche') || t.includes('à gauche')) {
+      icon.className = 'fas fa-arrow-left';
+    } else if (t.includes('droite') || t.includes('à droite')) {
+      icon.className = 'fas fa-arrow-right';
+    } else if (t.includes('demi-tour')) {
+      icon.className = 'fas fa-undo';
+    } else if (t.includes('rond-point')) {
+      icon.className = 'fas fa-sync';
+    } else if (t.includes('arrivée') || t.includes('arrivé') || t.includes('destination')) {
       icon.className = 'fas fa-flag-checkered';
       setTimeout(() => this.finishDriving(), 2000);
-    } else icon.className = 'fas fa-arrow-up';
+    } else if (t.includes('tout droit') || t.includes('continuer')) {
+      icon.className = 'fas fa-arrow-up';
+    } else {
+      icon.className = 'fas fa-arrow-up';
+    }
   },
 
   updateNextInstructions() {
@@ -977,7 +1076,7 @@ const app = {
       item.innerHTML = `
         <div class="next-item-icon"><i class="fas fa-arrow-up"></i></div>
         <div class="next-item-info">
-          <div class="next-item-distance">${distanceM > 1000 ? (distanceM/1000).toFixed(1) + ' km' : Math.round(distanceM) + ' m'}</div>
+          <div class="next-item-distance">${formatDistance(distanceM)}</div>
           <div class="next-item-text">${inst.text}</div>
         </div>`;
       listEl.appendChild(item);
