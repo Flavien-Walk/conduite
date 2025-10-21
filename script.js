@@ -39,7 +39,21 @@ const CONFIG = {
     { q: "À un feu orange, vous devez :", a: ["Accélérer", "Vous arrêter si possible en sécurité", "Continuer", "Klaxonner"], correct: 1 }
   ],
 
-  DEFAULT_SPEED_LIMIT: 50
+  DEFAULT_SPEED_LIMIT: 50,
+  
+  // Configuration caméra
+  CAMERA: {
+    // Mode navigation (vue 2D de dessus - type Waze)
+    MIN_ZOOM: 17.5,
+    MAX_ZOOM: 19,
+    BASE_ZOOM: 18,
+    PITCH: 0, // Vue 2D plate (pas 3D)
+    SPEED_ZOOM_FACTOR: 0.005,
+    LOOK_AHEAD_DISTANCE: 50, // Distance réduite en 2D
+    // Mode preview
+    PREVIEW_ZOOM: 15,
+    PREVIEW_PITCH: 60
+  }
 };
 
 /* ==================== ÉTAT ==================== */
@@ -54,6 +68,7 @@ const state = {
   startPosition: null,
   heading: 0,
   route: null,
+  routeGeometry: null,
   instructions: [],
   currentInstructionIndex: 0,
   startTime: null,
@@ -67,14 +82,30 @@ const state = {
   totalQuestions: 0,
   lastPosition: null,
   lastPositionTime: null,
-  userMarker: null
+  userMarker: null,
+  use3D: false,
+  isPreviewMode: true,
+  navigationStarted: false,
+  gpsRetries: 0
 };
 
 /* ==================== APPLICATION ==================== */
 
 const app = {
+  lastRouteUpdateLog: null,
+  lastRecalculation: null,
+  speedLimitErrors: 0,
+  
   init() {
-    console.log('🚗 Drive Lyon - Mapbox uniquement');
+    console.log('🚗 Drive Lyon - Navigation 2D');
+    
+    if (typeof THREE !== 'undefined') {
+      state.use3D = true;
+      console.log('✅ Three.js détecté - Mode 3D activé');
+    } else {
+      console.warn('⚠️ Three.js non disponible - Mode 2D classique');
+    }
+    
     this.renderZones();
     this.setupSlider();
   },
@@ -84,6 +115,7 @@ const app = {
     this.hideAllScreens();
     document.getElementById('homeScreen').classList.add('active');
     this.stopGPSTracking();
+    this.cleanupMap();
   },
   showConfig() {
     this.hideAllScreens();
@@ -145,15 +177,27 @@ const app = {
     }
 
     const askPosition = () => {
-      const gpsOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+      const gpsOptions = { 
+        enableHighAccuracy: true, 
+        timeout: 30000,
+        maximumAge: 5000
+      };
+      
+      console.log('🔍 Recherche signal GPS...');
+      
       navigator.geolocation.getCurrentPosition(
         (position) => this.onGPSSuccess(position),
         (error) => this.handleGPSError(error),
         gpsOptions
       );
+      
       state.watchId = navigator.geolocation.watchPosition(
         (pos) => this.onGPSUpdate(pos),
-        (err) => console.warn('⚠️ GPS update:', err),
+        (err) => {
+          if (err.code !== 3) {
+            console.warn('⚠️ GPS update:', err);
+          }
+        },
         gpsOptions
       );
     };
@@ -184,23 +228,47 @@ const app = {
         message = 'Permission GPS refusée';
         detail = 'Activez la géolocalisation dans les paramètres';
         this.showToast('❌ Autorisation GPS refusée', 'error');
+        setTimeout(() => this.showConfig(), 3000);
         break;
       case error.POSITION_UNAVAILABLE:
         message = 'Position GPS indisponible';
         detail = 'Impossible de déterminer votre position';
         this.showToast('❌ GPS indisponible', 'error');
+        setTimeout(() => this.showConfig(), 3000);
         break;
       case error.TIMEOUT:
-        message = 'GPS ne répond pas';
-        detail = 'Vérifiez que le GPS est activé';
-        this.showToast('⏱️ GPS trop lent, réessayez', 'warning');
+        state.gpsRetries++;
+        
+        if (state.gpsRetries > 3) {
+          message = 'GPS non disponible';
+          detail = 'Impossible de capter le signal GPS';
+          this.showToast('❌ Signal GPS trop faible', 'error');
+          document.getElementById('loaderText').textContent = message;
+          document.getElementById('loaderDetail').textContent = detail;
+          setTimeout(() => this.showConfig(), 3000);
+          return;
+        }
+        
+        message = `GPS ne répond pas (${state.gpsRetries}/3)`;
+        detail = 'Nouvelle tentative dans 3 secondes...';
+        this.showToast(`⏱️ Tentative ${state.gpsRetries}/3...`, 'warning');
+        document.getElementById('loaderText').textContent = message;
+        document.getElementById('loaderDetail').textContent = detail;
+        
+        setTimeout(() => {
+          console.log(`🔄 Nouvelle tentative GPS (${state.gpsRetries}/3)...`);
+          this.startGPSTracking();
+        }, 3000);
         break;
       default:
         this.showToast('❌ Erreur GPS', 'error');
+        setTimeout(() => this.showConfig(), 3000);
     }
-    document.getElementById('loaderText').textContent = message;
-    document.getElementById('loaderDetail').textContent = detail;
-    setTimeout(() => this.showConfig(), 3000);
+    
+    if (error.code !== error.TIMEOUT) {
+      document.getElementById('loaderText').textContent = message;
+      document.getElementById('loaderDetail').textContent = detail;
+    }
   },
 
   stopGPSTracking() {
@@ -215,7 +283,11 @@ const app = {
     state.currentPosition = { lat: latitude, lng: longitude };
     state.startPosition = { lat: latitude, lng: longitude };
     state.startTime = Date.now();
+    state.gpsRetries = 0;
 
+    console.log('✅ GPS Position acquise:', latitude.toFixed(6), longitude.toFixed(6));
+    console.log('📍 Précision:', accuracy.toFixed(0) + 'm');
+    
     document.getElementById('gpsStatus').textContent = 'GPS actif';
     document.getElementById('loaderDetail').textContent = `Précision: ${accuracy.toFixed(0)}m`;
 
@@ -227,7 +299,6 @@ const app = {
     const { latitude, longitude, speed, heading } = position.coords;
     state.currentPosition = { lat: latitude, lng: longitude };
 
-    // Distance parcourue
     if (state.lastPosition) {
       const from = turf.point([state.lastPosition.lng, state.lastPosition.lat]);
       const to = turf.point([longitude, latitude]);
@@ -235,7 +306,6 @@ const app = {
       state.distanceTraveled += distance;
     }
 
-    // Direction
     if (heading !== null && heading !== undefined && heading >= 0) {
       state.heading = heading;
     } else if (state.lastPosition) {
@@ -244,7 +314,6 @@ const app = {
       state.heading = turf.bearing(from, to);
     }
 
-    // Vitesse (m/s -> km/h)
     if (speed !== null && speed >= 0) {
       state.currentSpeed = Math.round(speed * 3.6);
     }
@@ -252,27 +321,122 @@ const app = {
     state.lastPosition = state.currentPosition;
     state.lastPositionTime = Date.now();
 
-    this.updateUI();
-    this.updateNavigation();
-    this.updateUserMarker3D();
-    this.getSpeedLimit(latitude, longitude);
+    if (state.navigationStarted) {
+      this.checkRouteDeviation();
+      this.updateUI();
+      this.updateNavigation();
+      this.updateCamera3D();
+      this.updateUserMarker();
+      this.updateVisibleRoute();
+      this.getSpeedLimit(latitude, longitude);
+    }
   },
 
-  // ========== CARTE 3D MAPBOX ==========
+  checkRouteDeviation() {
+    if (!state.currentPosition || !state.routeGeometry) return;
+    
+    try {
+      const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+      const routeLine = turf.lineString(state.routeGeometry.coordinates);
+      
+      const nearestPoint = turf.nearestPointOnLine(routeLine, currentPoint);
+      const distanceFromRoute = turf.distance(currentPoint, nearestPoint, { units: 'meters' });
+      
+      if (distanceFromRoute > 50) {
+        if (!this.lastRecalculation || Date.now() - this.lastRecalculation > 10000) {
+          console.log('🔄 Déviation détectée:', distanceFromRoute.toFixed(0) + 'm');
+          this.showToast('🔄 Recalcul de l\'itinéraire...', 'warning');
+          this.lastRecalculation = Date.now();
+          
+          setTimeout(() => {
+            this.recalculateRoute();
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Erreur checkRouteDeviation:', error);
+    }
+  },
+
+  async recalculateRoute() {
+    if (!state.currentPosition || state.selectedZones.length === 0) return;
+    
+    console.log('🔄 Recalcul de l\'itinéraire depuis la position actuelle...');
+    
+    const waypoints = [state.currentPosition];
+    
+    state.selectedZones.forEach(zoneId => {
+      const zone = CONFIG.ZONES.find(z => z.id === zoneId);
+      if (zone) {
+        waypoints.push({
+          lat: zone.lat + (Math.random() - 0.5) * 0.01,
+          lng: zone.lng + (Math.random() - 0.5) * 0.01
+        });
+      }
+    });
+    
+    if (state.startPosition) {
+      waypoints.push(state.startPosition);
+    }
+    
+    const coordinates = waypoints.map(wp => `${wp.lng},${wp.lat}`).join(';');
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&steps=true&access_token=${mapboxgl.accessToken}`;
+    
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        
+        state.route = route;
+        state.routeGeometry = route.geometry;
+        state.totalDistance = route.distance / 1000;
+        state.totalDuration = route.duration / 60;
+        state.instructions = [];
+        
+        route.legs.forEach(leg => {
+          leg.steps.forEach(step => {
+            state.instructions.push({
+              text: step.maneuver.instruction,
+              distance: step.distance,
+              duration: step.duration,
+              location: step.maneuver.location
+            });
+          });
+        });
+        
+        state.currentInstructionIndex = 0;
+        
+        this.updateVisibleRoute();
+        this.updateNavigation();
+        
+        console.log('✅ Itinéraire recalculé');
+        this.showToast('✅ Nouvel itinéraire calculé', 'success');
+      }
+    } catch (error) {
+      console.error('❌ Erreur recalcul itinéraire:', error);
+      this.showToast('⚠️ Erreur recalcul', 'error');
+    }
+  },
+
+  // ========== CARTE MAPBOX ==========
   initMap3D() {
-    console.log('🗺️ Initialisation carte 3D...');
+    console.log('🗺️ Initialisation carte...');
     state.map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/streets-v12',
       center: [state.startPosition.lng, state.startPosition.lat],
-      zoom: 17,
-      pitch: 60,
+      zoom: CONFIG.CAMERA.BASE_ZOOM,
+      pitch: CONFIG.CAMERA.PREVIEW_PITCH,
       bearing: 0,
-      antialias: true
+      antialias: true,
+      maxPitch: 60
     });
 
     state.map.on('load', () => {
-      // Couche bâtiments 3D
+      console.log('✅ Carte chargée');
+      
       state.map.addLayer({
         id: '3d-buildings',
         source: 'composite',
@@ -294,47 +458,214 @@ const app = {
     });
   },
 
-  updateUserMarker3D() {
-    if (!state.map || !state.currentPosition) return;
+  updateUserMarker() {
+    if (!state.map || !state.currentPosition || !state.navigationStarted) return;
 
-    if (state.userMarker) state.userMarker.remove();
+    if (state.userMarker) {
+      state.userMarker.remove();
+    }
+
+    let markerRotation = 0;
+    
+    if (state.instructions.length > 0 && state.currentInstructionIndex < state.instructions.length) {
+      const nextInstruction = state.instructions[state.currentInstructionIndex];
+      if (nextInstruction && nextInstruction.location) {
+        const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+        const targetPoint = turf.point(nextInstruction.location);
+        markerRotation = turf.bearing(currentPoint, targetPoint);
+      }
+    }
 
     const icon = state.vehicle === 'car' ? '🚗' : '🏍️';
     const el = document.createElement('div');
-    el.className = 'user-marker-3d';
+    el.className = 'user-marker-2d';
     el.innerHTML = icon;
-    el.style.fontSize = '36px';
-    el.style.transform = `rotate(${state.heading}deg)`;
-    el.style.transition = 'transform 0.5s ease';
+    el.style.fontSize = '40px';
+    el.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.7))';
 
-    state.userMarker = new mapboxgl.Marker(el)
+    state.userMarker = new mapboxgl.Marker({ 
+      element: el, 
+      anchor: 'center',
+      rotation: markerRotation,
+      rotationAlignment: 'map'
+    })
       .setLngLat([state.currentPosition.lng, state.currentPosition.lat])
       .addTo(state.map);
+  },
 
-    // Suivi caméra
+  updateCamera3D() {
+    if (!state.map || !state.currentPosition || !state.navigationStarted) return;
+
+    let targetBearing = state.heading;
+    
+    if (state.instructions.length > 0 && state.currentInstructionIndex < state.instructions.length) {
+      const nextInstruction = state.instructions[state.currentInstructionIndex];
+      if (nextInstruction && nextInstruction.location) {
+        const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+        const targetPoint = turf.point(nextInstruction.location);
+        targetBearing = turf.bearing(currentPoint, targetPoint);
+      }
+    }
+
+    const lookAheadDistance = CONFIG.CAMERA.LOOK_AHEAD_DISTANCE / 1000;
+    const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+    const targetPoint = turf.destination(currentPoint, lookAheadDistance, targetBearing, { units: 'kilometers' });
+    const targetCoords = targetPoint.geometry.coordinates;
+
+    const speedFactor = Math.min(state.currentSpeed * CONFIG.CAMERA.SPEED_ZOOM_FACTOR, 1);
+    const dynamicZoom = Math.max(
+      CONFIG.CAMERA.MIN_ZOOM,
+      Math.min(CONFIG.CAMERA.MAX_ZOOM, CONFIG.CAMERA.BASE_ZOOM - speedFactor)
+    );
+
+    const pitch = CONFIG.CAMERA.PITCH;
+
     state.map.easeTo({
-      center: [state.currentPosition.lng, state.currentPosition.lat],
-      bearing: state.heading,
-      pitch: 60,
-      zoom: 17,
-      duration: 500
+      center: targetCoords,
+      bearing: targetBearing,
+      pitch: pitch,
+      zoom: dynamicZoom,
+      duration: 500,
+      easing: (t) => t * (2 - t)
     });
   },
 
-  recenterMap() {
-    if (state.currentPosition && state.map) {
-      state.map.flyTo({
-        center: [state.currentPosition.lng, state.currentPosition.lat],
-        bearing: state.heading,
-        pitch: 60,
-        zoom: 17,
-        duration: 1000
-      });
-      this.showToast('Carte recentrée', 'success');
+  updateVisibleRoute() {
+    if (!state.map || !state.routeGeometry || !state.currentPosition || !state.navigationStarted) return;
+
+    try {
+      const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+      const routeCoords = state.routeGeometry.coordinates;
+      
+      // Trouver le point de la route le plus proche
+      let closestIndex = 0;
+      let minDistance = Infinity;
+      
+      for (let i = 0; i < routeCoords.length; i++) {
+        const routePoint = turf.point(routeCoords[i]);
+        const distance = turf.distance(currentPoint, routePoint, { units: 'meters' });
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = i;
+        }
+      }
+      
+      // SOLUTION : Afficher uniquement jusqu'à la prochaine instruction
+      let targetIndex = routeCoords.length - 1;
+      
+      if (state.instructions.length > 0 && state.currentInstructionIndex < state.instructions.length) {
+        const nextInstruction = state.instructions[state.currentInstructionIndex];
+        if (nextInstruction && nextInstruction.location) {
+          const targetPoint = turf.point(nextInstruction.location);
+          
+          let minDistToTarget = Infinity;
+          for (let i = closestIndex; i < routeCoords.length; i++) {
+            const routePoint = turf.point(routeCoords[i]);
+            const distToTarget = turf.distance(targetPoint, routePoint, { units: 'meters' });
+            
+            if (distToTarget < minDistToTarget) {
+              minDistToTarget = distToTarget;
+              targetIndex = i;
+            }
+            
+            if (distToTarget > minDistToTarget + 50) {
+              break;
+            }
+          }
+        }
+      }
+      
+      // Ajouter quelques points après la prochaine instruction
+      const EXTRA_POINTS = 10;
+      targetIndex = Math.min(targetIndex + EXTRA_POINTS, routeCoords.length - 1);
+      
+      const forwardCoords = routeCoords.slice(closestIndex + 1, targetIndex + 1);
+      
+      if (forwardCoords.length > 0) {
+        const visibleCoords = [
+          [state.currentPosition.lng, state.currentPosition.lat],
+          ...forwardCoords
+        ];
+        
+        if (visibleCoords.length >= 2) {
+          const newGeometry = {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: visibleCoords
+            },
+            properties: {}
+          };
+          
+          const source = state.map.getSource('route');
+          if (source) {
+            source.setData(newGeometry);
+          }
+          
+          if (!this.lastRouteUpdateLog || Date.now() - this.lastRouteUpdateLog > 5000) {
+            console.log(`✂️ Ligne: ${forwardCoords.length} points jusqu'à prochaine instruction`);
+            this.lastRouteUpdateLog = Date.now();
+          }
+        }
+      } else {
+        console.log('🏁 Fin du parcours');
+      }
+    } catch (error) {
+      console.error('❌ Erreur updateVisibleRoute:', error);
     }
   },
 
-  // ========== ROUTING (Mapbox Directions API REST) ==========
+  recenterMap() {
+    if (!state.currentPosition || !state.map) return;
+    
+    if (!state.navigationStarted) {
+      if (state.routeGeometry) {
+        const coordinates = state.routeGeometry.coordinates;
+        const bounds = coordinates.reduce((bounds, coord) => {
+          return bounds.extend(coord);
+        }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
+
+        state.map.fitBounds(bounds, {
+          padding: { top: 100, bottom: 200, left: 50, right: 50 },
+          pitch: CONFIG.CAMERA.PREVIEW_PITCH,
+          duration: 1200
+        });
+      }
+      this.showToast('Vue recentrée sur le parcours', 'success');
+      return;
+    }
+    
+    console.log('🎯 Recentrage vue 2D navigation');
+    
+    let targetBearing = state.heading || 0;
+    
+    if (state.instructions.length > 0 && state.currentInstructionIndex < state.instructions.length) {
+      const nextInstruction = state.instructions[state.currentInstructionIndex];
+      if (nextInstruction && nextInstruction.location) {
+        const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+        const targetPoint = turf.point(nextInstruction.location);
+        targetBearing = turf.bearing(currentPoint, targetPoint);
+      }
+    }
+    
+    const lookAheadDistance = CONFIG.CAMERA.LOOK_AHEAD_DISTANCE / 1000;
+    const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+    const targetPoint = turf.destination(currentPoint, lookAheadDistance, targetBearing, { units: 'kilometers' });
+    
+    state.map.flyTo({
+      center: targetPoint.geometry.coordinates,
+      bearing: targetBearing,
+      pitch: CONFIG.CAMERA.PITCH,
+      zoom: CONFIG.CAMERA.BASE_ZOOM,
+      duration: 1500,
+      essential: true
+    });
+    
+    this.showToast('🗺️ Vue recentrée', 'success');
+  },
+
+  // ========== ROUTING ==========
   async generateRoute() {
     document.getElementById('loaderText').textContent = 'Calcul du parcours...';
     document.getElementById('loaderDetail').textContent = 'Génération itinéraire';
@@ -351,7 +682,6 @@ const app = {
       }
     });
 
-    // Retour au point de départ
     waypoints.push(state.startPosition);
 
     const coordinates = waypoints.map(wp => `${wp.lng},${wp.lat}`).join(';');
@@ -365,11 +695,11 @@ const app = {
         const route = data.routes[0];
 
         state.route = route;
+        state.routeGeometry = route.geometry;
         state.totalDistance = route.distance / 1000;
         state.totalDuration = route.duration / 60;
         state.instructions = [];
 
-        // Extraire les instructions
         route.legs.forEach(leg => {
           leg.steps.forEach(step => {
             state.instructions.push({
@@ -381,32 +711,15 @@ const app = {
           });
         });
 
-        // Afficher la ligne sur la carte
-        const geojson = {
-          type: 'Feature',
-          geometry: route.geometry,
-          properties: {}
-        };
+        console.log('✅ Route calculée:', route.geometry.coordinates.length, 'points');
 
-        if (state.map.getSource('route')) {
-          state.map.getSource('route').setData(geojson);
-        } else {
-          state.map.addSource('route', { type: 'geojson', data: geojson });
-          state.map.addLayer({
-            id: 'route',
-            type: 'line',
-            source: 'route',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: { 'line-color': '#3b82f6', 'line-width': 8, 'line-opacity': 0.9 }
-          });
-        }
+        state.isPreviewMode = true;
+        this.drawRoute(route.geometry);
 
-        // Masquer le loader
         document.getElementById('loader').classList.remove('active');
-
+        this.showPreviewControls();
+        
         this.showToast(`✅ Parcours: ${state.totalDistance.toFixed(1)} km`, 'success');
-        this.updateNavigation();
-        this.updateNextInstructions();
       } else {
         throw new Error('Aucune route trouvée.');
       }
@@ -417,9 +730,191 @@ const app = {
     }
   },
 
+  showPreviewControls() {
+    document.querySelector('.nav-card').style.display = 'none';
+    document.querySelector('.speed-widget').style.display = 'none';
+    document.querySelector('.action-buttons').style.display = 'none';
+    
+    const existingBtn = document.getElementById('startNavigationBtn');
+    if (existingBtn) existingBtn.remove();
+    
+    const btn = document.createElement('button');
+    btn.id = 'startNavigationBtn';
+    btn.className = 'btn-start-navigation';
+    btn.innerHTML = '<i class="fas fa-play"></i><span>Commencer la navigation</span>';
+    btn.onclick = () => this.startNavigation();
+    
+    document.getElementById('drivingScreen').appendChild(btn);
+  },
+
+  startNavigation() {
+    console.log('🚀 Démarrage de la navigation');
+    
+    const btn = document.getElementById('startNavigationBtn');
+    if (btn) btn.remove();
+    
+    document.querySelector('.nav-card').style.display = 'flex';
+    document.querySelector('.speed-widget').style.display = 'flex';
+    document.querySelector('.action-buttons').style.display = 'flex';
+    
+    state.isPreviewMode = false;
+    state.navigationStarted = true;
+    state.startTime = Date.now();
+    
+    if (state.map && state.map.getLayer('3d-buildings')) {
+      state.map.setLayoutProperty('3d-buildings', 'visibility', 'none');
+      console.log('🏢 Bâtiments 3D masqués');
+    }
+    
+    this.updateNavigation();
+    this.updateNextInstructions();
+    
+    if (state.currentPosition && state.routeGeometry) {
+      this.updateVisibleRoute();
+      console.log('✂️ Ligne coupée : seulement la partie devant est visible');
+    }
+    
+    setTimeout(() => {
+      this.transitionToFirstPersonView();
+    }, 100);
+    
+    this.showToast('🗺️ Navigation 2D démarrée !', 'success');
+  },
+
+  transitionToFirstPersonView() {
+    if (!state.map || !state.currentPosition) return;
+    
+    console.log('🎥 Transition vers vue 2D navigation (type Waze)');
+    
+    let targetBearing = state.heading || 0;
+    
+    if (state.instructions.length > 0 && state.instructions[0]) {
+      const nextInstruction = state.instructions[0];
+      if (nextInstruction && nextInstruction.location) {
+        const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+        const targetPoint = turf.point(nextInstruction.location);
+        targetBearing = turf.bearing(currentPoint, targetPoint);
+      }
+    }
+    
+    const lookAheadDistance = CONFIG.CAMERA.LOOK_AHEAD_DISTANCE / 1000;
+    const currentPoint = turf.point([state.currentPosition.lng, state.currentPosition.lat]);
+    const targetPoint = turf.destination(currentPoint, lookAheadDistance, targetBearing, { units: 'kilometers' });
+    
+    state.map.flyTo({
+      center: targetPoint.geometry.coordinates,
+      zoom: CONFIG.CAMERA.BASE_ZOOM,
+      pitch: CONFIG.CAMERA.PITCH,
+      bearing: targetBearing,
+      duration: 2000,
+      essential: true
+    });
+    
+    console.log('✅ Vue 2D activée - pitch:', CONFIG.CAMERA.PITCH);
+    
+    setTimeout(() => {
+      this.updateUserMarker();
+    }, 500);
+  },
+
+  drawRoute(geometry) {
+    if (!state.map) return;
+
+    console.log('🎨 Dessin de la route...');
+
+    const geojson = {
+      type: 'Feature',
+      geometry: geometry,
+      properties: {}
+    };
+
+    if (state.map.getLayer('route-center')) {
+      state.map.removeLayer('route-center');
+    }
+    if (state.map.getLayer('route')) {
+      state.map.removeLayer('route');
+    }
+    if (state.map.getLayer('route-outline')) {
+      state.map.removeLayer('route-outline');
+    }
+    if (state.map.getSource('route')) {
+      state.map.removeSource('route');
+    }
+
+    state.map.addSource('route', {
+      type: 'geojson',
+      data: geojson,
+      lineMetrics: true
+    });
+
+    state.map.addLayer({
+      id: 'route-outline',
+      type: 'line',
+      source: 'route',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#0c2461',
+        'line-width': 16,
+        'line-opacity': 0.5,
+        'line-blur': 4
+      }
+    });
+
+    state.map.addLayer({
+      id: 'route',
+      type: 'line',
+      source: 'route',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#2563eb',
+        'line-width': 12,
+        'line-opacity': 0.95
+      }
+    });
+
+    state.map.addLayer({
+      id: 'route-center',
+      type: 'line',
+      source: 'route',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#60a5fa',
+        'line-width': 6,
+        'line-opacity': 1
+      }
+    });
+
+    console.log('✅ Route dessinée sur la carte');
+
+    if (state.isPreviewMode) {
+      const coordinates = geometry.coordinates;
+      const bounds = coordinates.reduce((bounds, coord) => {
+        return bounds.extend(coord);
+      }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
+
+      state.map.fitBounds(bounds, {
+        padding: { top: 100, bottom: 200, left: 50, right: 50 },
+        pitch: CONFIG.CAMERA.PREVIEW_PITCH,
+        duration: 2000
+      });
+      
+      this.showToast('🗺️ Aperçu du parcours - Appuyez sur "Commencer"', 'success');
+    }
+  },
+
   // ========== NAVIGATION ==========
   updateNavigation() {
-    if (!state.currentPosition || !state.instructions.length) {
+    if (!state.currentPosition || !state.instructions.length || !state.navigationStarted) {
+      if (!state.navigationStarted) return;
       document.getElementById('navDistance').textContent = '--';
       document.getElementById('navStreet').textContent = 'Aucune instruction';
       return;
@@ -439,18 +934,15 @@ const app = {
       this.updateNextInstructions();
     }
 
-    // Distance
     document.getElementById('navDistance').textContent =
       distanceM > 1000 ? `${(distanceM / 1000).toFixed(1)} km` : `${Math.round(distanceM)} m`;
 
-    // Temps estimé simple
     const speed = state.currentSpeed > 0 ? state.currentSpeed : 40;
     const timeMin = (distanceM / 1000) / speed * 60;
     document.getElementById('navTime').textContent = timeMin < 1
       ? `${Math.round(timeMin * 60)} sec`
       : `${Math.round(timeMin)} min`;
 
-    // Instruction + icône
     document.getElementById('navStreet').textContent = instruction.text;
     this.updateDirectionIcon(instruction.text);
   },
@@ -496,12 +988,25 @@ const app = {
     document.getElementById('nextInstructions').classList.toggle('active');
   },
 
-  // ========== LIMITES DE VITESSE (OSM Overpass) ==========
+  // ========== LIMITES DE VITESSE ==========
   async getSpeedLimit(lat, lng) {
+    if (this.speedLimitErrors > 3) return;
+    
     try {
       const radius = 50;
-      const query = `[out:json][timeout:3];way(around:${radius},${lat},${lng})["maxspeed"];out body;`;
-      const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: query });
+      const query = `[out:json][timeout:5];way(around:${radius},${lat},${lng})["maxspeed"];out body;`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch('https://overpass-api.de/api/interpreter', { 
+        method: 'POST', 
+        body: query,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         const data = await response.json();
         if (data.elements && data.elements.length > 0) {
@@ -513,12 +1018,22 @@ const app = {
           }
         }
       }
-    } catch { /* silencieux */ }
+    } catch (error) {
+      if (!this.speedLimitErrors) this.speedLimitErrors = 0;
+      this.speedLimitErrors++;
+      
+      if (this.speedLimitErrors === 3) {
+        console.warn('⚠️ API vitesse désactivée (trop d\'erreurs)');
+      }
+    }
+    
     document.getElementById('speedLimit').textContent = CONFIG.DEFAULT_SPEED_LIMIT;
   },
 
   // ========== UI ==========
   updateUI() {
+    if (!state.navigationStarted) return;
+    
     document.getElementById('speedValue').textContent = state.currentSpeed;
     if (state.startTime && state.totalDuration > 0) {
       const elapsed = (Date.now() - state.startTime) / 1000 / 60;
@@ -590,12 +1105,12 @@ const app = {
       return;
     }
 
-    // Reset
     Object.assign(state, {
       currentPosition: null,
       startPosition: null,
       startTime: null,
       route: null,
+      routeGeometry: null,
       instructions: [],
       currentInstructionIndex: 0,
       totalDistance: 0,
@@ -605,7 +1120,10 @@ const app = {
       correctAnswers: 0,
       totalQuestions: 0,
       currentSpeed: 0,
-      heading: 0
+      heading: 0,
+      isPreviewMode: true,
+      navigationStarted: false,
+      gpsRetries: 0
     });
 
     this.showDriving();
@@ -614,7 +1132,7 @@ const app = {
   },
 
   stopDriving() {
-    if (confirm('❓ Arrêter le parcours ?')) this.finishDriving();
+    if (confirm('⚠ Arrêter le parcours ?')) this.finishDriving();
   },
 
   finishDriving() {
@@ -629,6 +1147,21 @@ const app = {
   newRoute() {
     document.getElementById('finishModal').classList.remove('active');
     setTimeout(() => this.showConfig(), 300);
+  },
+
+  // ========== CLEANUP ==========
+  cleanupMap() {
+    const btn = document.getElementById('startNavigationBtn');
+    if (btn) btn.remove();
+    
+    if (state.userMarker) {
+      state.userMarker.remove();
+      state.userMarker = null;
+    }
+    if (state.map) {
+      state.map.remove();
+      state.map = null;
+    }
   },
 
   // ========== UTIL ==========
@@ -648,11 +1181,45 @@ const app = {
 
 /* ==================== DÉMARRAGE ==================== */
 
+const style = document.createElement('style');
+style.textContent = `
+  .btn-start-navigation {
+    position: fixed;
+    bottom: 140px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 500;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 1.25rem 2.5rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'Inter', sans-serif;
+    animation: pulseGlow 2s infinite;
+  }
+  
+  .btn-start-navigation:active {
+    transform: translateX(-50%) scale(0.95);
+  }
+  
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 10px 50px rgba(16, 185, 129, 0.6); }
+  }
+`;
+document.head.appendChild(style);
+
 document.addEventListener('DOMContentLoaded', () => {
-  // attendre un instant que Mapbox/Turf soient prêts
   setTimeout(() => {
     if (typeof mapboxgl !== 'undefined' && typeof turf !== 'undefined') {
-      window.app = app; // rendre global pour les onclick du HTML
+      window.app = app;
       app.init();
     } else {
       console.error('❌ Librairies manquantes');
