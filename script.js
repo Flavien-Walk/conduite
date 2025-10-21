@@ -1278,42 +1278,8 @@ const app = {
   }
 };
 
-/* ==================== DÉMARRAGE ==================== */
 
-const style = document.createElement('style');
-style.textContent = `
-  .btn-start-navigation {
-    position: fixed;
-    bottom: 140px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 500;
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-    border: none;
-    padding: 1.25rem 2.5rem;
-    font-size: 1.2rem;
-    font-weight: 700;
-    border-radius: 50px;
-    cursor: pointer;
-    box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-family: 'Inter', sans-serif;
-    animation: pulseGlow 2s infinite;
-  }
-  
-  .btn-start-navigation:active {
-    transform: translateX(-50%) scale(0.95);
-  }
-  
-  @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4); }
-    50% { box-shadow: 0 10px 50px rgba(16, 185, 129, 0.6); }
-  }
-`;
-document.head.appendChild(style);
+
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
